@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>canv3</title>
+    <title>mapaUMP</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -150,6 +150,16 @@
 
         .dark-mode .btn.share-btn {
             background: #2d4b7a;
+        }
+
+        .btn.new-map-btn {
+            background: #2d6bcb;
+            color: white;
+        }
+        .btn.new-map-btn i { color: white; }
+
+        .dark-mode .btn.new-map-btn {
+            background: #4a7db0;
         }
 
         .workspace {
@@ -532,6 +542,7 @@
         <div class="logo"><h1><i class="fas fa-code-branch"></i> canvas</h1></div>
         <div class="action-buttons">
             <button class="btn theme-toggle" id="themeToggle"><i class="fas fa-moon"></i> Dark</button>
+            <button class="btn new-map-btn" id="newMapBtn"><i class="fas fa-file"></i> New Map</button>
             <button class="btn" id="addRootBtn"><i class="fas fa-plus-circle"></i> New root</button>
             <button class="btn" id="addChildBtn"><i class="fas fa-sitemap"></i> Add child</button>
             <button class="btn" id="editNodeBtn"><i class="fas fa-pen-fancy"></i> Edit</button>
@@ -760,6 +771,27 @@
             });
         };
 
+        // ==================== NEW MAP ====================
+        const createNewMap = () => {
+            const name = prompt('Enter name for new mind map:', 'My New Map');
+            if (!name) return;
+            
+            mindmap = {
+                id: generateId(),
+                name: name,
+                color: '#3b6bb0',
+                x: 600,
+                y: 200,
+                children: []
+            };
+            
+            collapsedNodes.clear();
+            panX = 0;
+            panY = 0;
+            currentScale = 1.0;
+            refresh();
+        };
+
         // ==================== NODE OPERATIONS ====================
         const addChildToNode = (nodeId) => {
             const node = findNodeById(mindmap, nodeId);
@@ -822,16 +854,7 @@
         const deleteNode = (nodeId) => {
             if (nodeId === mindmap.id) {
                 if (confirm('Delete entire mind map?')) {
-                    mindmap = {
-                        id: generateId(),
-                        name: 'New Mind Map',
-                        color: '#3b6bb0',
-                        x: 600,
-                        y: 200,
-                        children: []
-                    };
-                    collapsedNodes.clear();
-                    refresh();
+                    createNewMap();
                 }
                 return;
             }
@@ -1232,6 +1255,9 @@
             
             renderMindMap();
         });
+
+        // New Map button
+        document.getElementById('newMapBtn').addEventListener('click', createNewMap);
 
         // Add root
         document.getElementById('addRootBtn').addEventListener('click', () => {
