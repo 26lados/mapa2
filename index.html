@@ -1,6 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>canvas · rock-solid branches</title>
+    <!-- Font Awesome & Inter -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- interact.js for smooth drag -->
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.17/dist/interact.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(145deg, #f0f5fe 0%, #e9f0fa 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            transition: background 0.3s;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(145deg, #1a1f2b 0%, #0f1219 100%);
+        }
+
+        .app-container {
+            width: 1400px;
+            max-width: 100%;
+            height: 90vh;
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 42px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: all 0.3s;
         }
 
         .app-container.dark-mode {
@@ -11,7 +54,40 @@
 
         .app-container.fullscreen {
             width: 100vw;
-            height: 100vh; 
+            height: 100vh;
+            border-radius: 0;
+            margin: 0;
+        }
+
+        .toolbar {
+            padding: 18px 28px;
+            background: rgba(255,255,255,0.4);
+            border-bottom: 1px solid rgba(255,255,255,0.6);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+
+        .dark-mode .toolbar {
+            background: rgba(30, 35, 48, 0.6);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo h1 {
+            font-weight: 600;
+            font-size: 1.6rem;
+            color: #1b2b4b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.3s;
+        }
+
+        .dark-mode .logo h1 {
             color: #e0e5f0;
         }
 
@@ -39,6 +115,7 @@
             align-items: center;
             gap: 8px;
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
         .dark-mode .btn {
@@ -82,7 +159,6 @@
             position: relative;
         }
 
-        /* left panel */
         .structure-panel {
             width: 260px;
             background: rgba(245, 248, 255, 0.7);
@@ -154,7 +230,6 @@
         .tree-node i { color: #2d6bcb; width: 20px; }
         .tree-node .label { flex:1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* main canvas - completely redesigned zoom/pan */
         .mindmap-area {
             flex: 1;
             background: rgba(255,255,255,0.25);
@@ -170,7 +245,7 @@
         #viewport {
             width: 100%;
             height: 100%;
-            overflow: hidden;
+            overflow: auto;
             position: relative;
             cursor: grab;
         }
@@ -180,14 +255,37 @@
         }
 
         #mindmapCanvas {
-            position: absolute;
-            transform-origin: 0 0;
+            position: relative;
             width: 3000px;
             height: 2000px;
-            will-change: transform;
+            transform-origin: 0 0;
         }
 
-        /* node cards */
+        /* NEW APPROACH: Use HTML elements for branches */
+        .branch-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .branch {
+            position: absolute;
+            background: linear-gradient(45deg, #94a9c9, #b7c9e5);
+            height: 3px;
+            transform-origin: 0 0;
+            pointer-events: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 3px;
+        }
+
+        .dark-mode .branch {
+            background: linear-gradient(45deg, #4a5a7a, #5a6a8a);
+        }
+
         .node-card {
             position: absolute;
             background: rgba(255,255,255,0.95);
@@ -204,7 +302,7 @@
             transition: box-shadow 0.1s, background 0.3s;
             font-weight: 500;
             color: #11223b;
-            will-change: transform;
+            will-change: left, top;
             touch-action: none;
             z-index: 100;
         }
@@ -234,30 +332,6 @@
             color: #6a7a9a;
         }
 
-        /* branch lines - now using canvas coordinates */
-        .branch-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 50;
-        }
-
-        .branch-line {
-            stroke: #94a9c9;
-            stroke-width: 2.5;
-            stroke-dasharray: 5,3;
-            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
-            vector-effect: non-scaling-stroke;
-        }
-
-        .dark-mode .branch-line {
-            stroke: #4a5a7a;
-        }
-
-        /* color picker */
         .color-picker-wrapper {
             display: flex;
             align-items: center;
@@ -273,7 +347,6 @@
 
         #nodeColorPicker { width: 40px; height: 40px; border-radius: 40px; border: 2px solid white; cursor: pointer; }
 
-        /* zoom controls */
         .zoom-controls {
             position: absolute;
             bottom: 24px;
@@ -328,7 +401,6 @@
             font-weight: 600;
         }
 
-        /* theme toggle */
         .theme-toggle {
             background: rgba(255,255,255,0.75);
             border: 1px solid rgba(46, 91, 150, 0.2);
@@ -343,7 +415,6 @@
             color: #e0e5f0;
         }
 
-        /* modals */
         .modal-overlay {
             position: fixed;
             top:0; left:0; width:100%; height:100%;
@@ -396,7 +467,7 @@
 <body>
 <div class="app-container" id="appContainer">
     <div class="toolbar">
-        <div class="logo"><h1><i class="fas fa-arrows-up-down-left-right"></i> flux</h1></div>
+        <div class="logo"><h1><i class="fas fa-code-branch"></i> canvas</h1></div>
         <div class="action-buttons">
             <button class="btn theme-toggle" id="themeToggle"><i class="fas fa-moon"></i> Dark</button>
             <button class="btn" id="addRootBtn"><i class="fas fa-plus-circle"></i> New root</button>
@@ -406,7 +477,7 @@
                 <label><i class="fas fa-palette"></i></label>
                 <input type="color" id="nodeColorPicker" value="#2d6bcb">
             </div>
-            <button class="btn" id="applyColorBtn"><i class="fas fa-fill-drip"></i> Apply color</button>
+            <button class="btn" id="applyColorBtn"><i class="fas fa-fill-drip"></i> Apply</button>
             <button class="btn" id="resetLayoutBtn"><i class="fas fa-rotate"></i> Reset</button>
             <button class="btn" id="fullscreenBtn"><i class="fas fa-expand"></i> Fullscreen</button>
             <button class="btn" id="exportBtn"><i class="fas fa-download"></i> Export</button>
@@ -419,12 +490,15 @@
                 <div class="section-title"><i class="fas fa-diagram-project"></i> branches</div>
                 <div class="tree-view" id="treeView"></div>
                 <button class="btn" id="collapseToggleBtn" style="width:100%; margin-top:12px;"><i class="fas fa-eye-slash"></i> collapse/expand</button>
+                <button class="btn" id="collapseAllBtn" style="width:100%; margin-top:8px;"><i class="fas fa-compress-alt"></i> Collapse all</button>
+                <button class="btn" id="expandAllBtn" style="width:100%; margin-top:8px;"><i class="fas fa-expand-alt"></i> Expand all</button>
             </div>
         </div>
         <div class="mindmap-area" id="mindmapArea">
             <div id="viewport">
                 <div id="mindmapCanvas">
-                    <svg class="branch-layer" id="branchSvg"></svg>
+                    <div class="branch-container" id="branchContainer"></div>
+                    <!-- nodes will be inserted here -->
                 </div>
             </div>
             <div class="zoom-controls">
@@ -438,12 +512,51 @@
 </div>
 
 <!-- modals -->
-<div class="modal-overlay" id="editModal"><div class="modal-card"><h2>Edit node</h2><div class="input-group"><label>ID: <span id="editNodeId">-</span></label><input type="text" id="editNodeName" placeholder="New name"></div><div class="modal-actions"><button class="btn" id="cancelEdit">Cancel</button><button class="btn share-btn" id="saveEdit">Save</button></div></div></div>
-<div class="modal-overlay" id="colorModal"><div class="modal-card"><h2>Change color</h2><div class="input-group"><label>Node ID: <span id="colorNodeId">-</span></label><input type="color" id="nodeColorModalPicker" value="#2d6bcb"></div><div class="modal-actions"><button class="btn" id="cancelColor">Cancel</button><button class="btn share-btn" id="applyColorModal">Apply</button></div></div></div>
-<div class="modal-overlay" id="shareModal"><div class="modal-card"><h2>Share map</h2><div class="input-group"><textarea id="shareData" rows="5" readonly></textarea></div><div class="modal-actions"><button class="btn" id="copyShareBtn">Copy</button><button class="btn share-btn" id="closeShareBtn">Close</button></div></div></div>
+<div class="modal-overlay" id="editModal">
+    <div class="modal-card">
+        <h2><i class="fas fa-pencil" style="color:#2d6bcb;"></i> Edit node</h2>
+        <div class="input-group">
+            <label>Node ID: <span id="editNodeId" style="font-family: monospace;">-</span></label>
+            <input type="text" id="editNodeName" placeholder="Enter new name">
+        </div>
+        <div class="modal-actions">
+            <button class="btn" id="cancelEdit">Cancel</button>
+            <button class="btn share-btn" id="saveEdit">Save</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="colorModal">
+    <div class="modal-card">
+        <h2><i class="fas fa-palette"></i> Change color</h2>
+        <div class="input-group">
+            <label>Node ID: <span id="colorNodeId" style="font-family: monospace;">-</span></label>
+            <input type="color" id="nodeColorModalPicker" value="#2d6bcb" style="height: 60px;">
+        </div>
+        <div class="modal-actions">
+            <button class="btn" id="cancelColor">Cancel</button>
+            <button class="btn share-btn" id="applyColorModal">Apply</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="shareModal">
+    <div class="modal-card">
+        <h2><i class="fas fa-share-nodes"></i> Share map</h2>
+        <div class="input-group">
+            <label>Map JSON (copy this):</label>
+            <textarea id="shareData" rows="8" readonly style="font-family: monospace; font-size: 0.85rem;"></textarea>
+        </div>
+        <div class="modal-actions">
+            <button class="btn" id="copyShareBtn"><i class="fas fa-copy"></i> Copy</button>
+            <button class="btn share-btn" id="closeShareBtn">Close</button>
+        </div>
+    </div>
+</div>
 
 <script>
     (function() {
+        // ==================== DATA MODEL ====================
         let mindmap = {
             id: 'root1',
             name: 'Discovery',
@@ -460,116 +573,120 @@
             ]
         };
 
+        // State
         let collapsedNodes = new Set();
-        let nodeMap = new Map();
-        let dragOffsets = new Map();
+        let nodeMap = new Map(); // id -> DOM element
         
-        // Zoom and pan state
+        // Transform state
         let currentScale = 1.0;
         let panX = 0;
         let panY = 0;
         const MIN_SCALE = 0.2;
         const MAX_SCALE = 3.0;
         
-        // Panning state
+        // Pan state
         let isPanning = false;
         let startPanX = 0;
         let startPanY = 0;
 
+        // Modal targets
         let currentNodeToEdit = null;
         let currentNodeToColor = null;
 
-        // dark mode
-        let darkMode = localStorage.getItem('flux-dark') === 'true';
-        if (darkMode) {
-            document.body.classList.add('dark-mode');
-            document.getElementById('appContainer').classList.add('dark-mode');
-            document.getElementById('themeToggle').innerHTML = '<i class="fas fa-sun"></i> Light';
-        }
+        // Theme
+        let darkMode = localStorage.getItem('canvas-dark') === 'true';
 
-        document.getElementById('themeToggle').addEventListener('click', ()=>{
-            document.body.classList.toggle('dark-mode');
-            document.getElementById('appContainer').classList.toggle('dark-mode');
-            const btn = document.getElementById('themeToggle');
-            if (document.body.classList.contains('dark-mode')) {
-                btn.innerHTML = '<i class="fas fa-sun"></i> Light';
-                localStorage.setItem('flux-dark', 'true');
-            } else {
-                btn.innerHTML = '<i class="fas fa-moon"></i> Dark';
-                localStorage.setItem('flux-dark', 'false');
-            }
-            drawLines();
-        });
-
-        function generateId() { return 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2,6); }
-
-        function findNodeById(node, id) {
+        // ==================== UTILITIES ====================
+        const generateId = () => 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+        
+        const findNodeById = (node, id) => {
             if (node.id === id) return node;
             if (node.children) {
-                for (let c of node.children) {
-                    let found = findNodeById(c, id);
+                for (const child of node.children) {
+                    const found = findNodeById(child, id);
                     if (found) return found;
                 }
             }
             return null;
-        }
+        };
 
-        function getAllNodes() { let arr=[]; function t(n){ arr.push(n); n.children?.forEach(t); } t(mindmap); return arr; }
+        const getAllNodes = () => {
+            const nodes = [];
+            const traverse = (node) => {
+                nodes.push(node);
+                node.children?.forEach(traverse);
+            };
+            traverse(mindmap);
+            return nodes;
+        };
 
-        function renderTreeView() {
+        // ==================== RENDERING ====================
+        const renderTreeView = () => {
             const container = document.getElementById('treeView');
-            function r(node, depth=0) {
-                const d = document.createElement('div');
-                d.className = 'tree-node';
-                d.style.paddingLeft = (depth*20+8)+'px';
-                d.innerHTML = `<i class="fas fa-circle-nodes" style="color:${node.color||'#2d6bcb'}"></i><span class="label">${node.name}</span>`;
-                d.addEventListener('click', (e) => {
+            
+            const renderNode = (node, depth = 0) => {
+                const div = document.createElement('div');
+                div.className = 'tree-node';
+                div.style.paddingLeft = (depth * 20 + 8) + 'px';
+                div.innerHTML = `
+                    <i class="fas fa-circle-nodes" style="color:${node.color || '#2d6bcb'}"></i>
+                    <span class="label">${node.name}</span>
+                    ${node.children?.length ? `<i class="fas ${collapsedNodes.has(node.id) ? 'fa-chevron-right' : 'fa-chevron-down'} collapse-icon"></i>` : ''}
+                `;
+                
+                div.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    if (node.children && node.children.length > 0) {
-                        if (collapsedNodes.has(node.id)) collapsedNodes.delete(node.id);
-                        else collapsedNodes.add(node.id);
+                    if (node.children?.length) {
+                        if (collapsedNodes.has(node.id)) {
+                            collapsedNodes.delete(node.id);
+                        } else {
+                            collapsedNodes.add(node.id);
+                        }
                         renderMindMap();
                         renderTreeView();
-                    } else {
-                        alert('Node has no children');
                     }
                 });
-                container.appendChild(d);
+                
+                container.appendChild(div);
+                
                 if (!collapsedNodes.has(node.id) && node.children) {
-                    node.children.forEach(c => r(c, depth+1));
+                    node.children.forEach(child => renderNode(child, depth + 1));
                 }
-            }
-            container.innerHTML = '';
-            r(mindmap);
-        }
+            };
 
-        // Draw lines using canvas coordinates - works at ANY zoom level
-        function drawLines() {
-            const svg = document.getElementById('branchSvg');
-            if (!svg) return;
-            svg.innerHTML = '';
+            container.innerHTML = '';
+            renderNode(mindmap);
+        };
+
+        // ==================== NEW BRANCH RENDERING ====================
+        // This uses HTML divs with transforms instead of SVG
+        // Branches are recalculated whenever nodes move and never fail
+        const renderBranches = () => {
+            const container = document.getElementById('branchContainer');
+            if (!container) return;
             
-            const nodes = getAllNodes();
+            container.innerHTML = '';
+            
+            // Build parent map
             const parentMap = new Map();
-            function traverse(p, node) { 
-                parentMap.set(node.id, p); 
-                node.children?.forEach(c => traverse(node, c)); 
-            }
+            const traverse = (parent, node) => {
+                parentMap.set(node.id, parent);
+                node.children?.forEach(child => traverse(node, child));
+            };
             traverse(null, mindmap);
 
-            // Set SVG viewBox to match canvas size
-            svg.setAttribute('viewBox', '0 0 3000 2000');
-            svg.setAttribute('preserveAspectRatio', 'none');
-
-            for (let node of nodes) {
+            // Draw branches for visible nodes
+            for (const node of getAllNodes()) {
                 if (collapsedNodes.has(node.id)) continue;
+                
                 const parent = parentMap.get(node.id);
                 if (!parent) continue;
+                
                 const parentEl = nodeMap.get(parent.id);
                 const childEl = nodeMap.get(node.id);
                 if (!parentEl || !childEl) continue;
 
-                // Get positions relative to canvas (style left/top)
+                // Get positions
                 const parentLeft = parseFloat(parentEl.style.left) || 0;
                 const parentTop = parseFloat(parentEl.style.top) || 0;
                 const childLeft = parseFloat(childEl.style.left) || 0;
@@ -579,95 +696,184 @@
                 const parentHeight = parentEl.offsetHeight;
                 const childWidth = childEl.offsetWidth;
 
-                // Calculate connection points
-                const x1 = parentLeft + parentWidth/2;
-                const y1 = parentTop + parentHeight;
-                const x2 = childLeft + childWidth/2;
-                const y2 = childTop;
+                // Calculate start and end points
+                const startX = parentLeft + parentWidth / 2;
+                const startY = parentTop + parentHeight;
+                const endX = childLeft + childWidth / 2;
+                const endY = childTop;
 
-                // Only draw if within reasonable bounds
-                if (x1 > 0 && y1 > 0 && x2 > 0 && y2 > 0) {
-                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                    line.setAttribute("x1", x1);
-                    line.setAttribute("y1", y1);
-                    line.setAttribute("x2", x2);
-                    line.setAttribute("y2", y2);
-                    line.setAttribute("stroke", node.color || "#94a9c9");
-                    line.setAttribute("stroke-width", "2.5");
-                    line.setAttribute("stroke-dasharray", "5,3");
-                    line.setAttribute("vector-effect", "non-scaling-stroke");
-                    line.setAttribute("class", "branch-line");
-                    svg.appendChild(line);
-                }
+                // Calculate distance and angle
+                const dx = endX - startX;
+                const dy = endY - startY;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                // Create branch element
+                const branch = document.createElement('div');
+                branch.className = 'branch';
+                branch.style.left = startX + 'px';
+                branch.style.top = startY + 'px';
+                branch.style.width = length + 'px';
+                branch.style.transform = `rotate(${angle}deg)`;
+                branch.style.background = `linear-gradient(45deg, ${node.color || '#94a9c9'}, ${node.color ? adjustColor(node.color, 20) : '#b7c9e5'})`;
+                
+                container.appendChild(branch);
             }
-        }
+        };
 
-        // Apply both zoom and pan transforms
-        function applyTransform() {
+        // Helper to lighten/darken colors for gradient
+        const adjustColor = (color, percent) => {
+            const num = parseInt(color.replace('#', ''), 16);
+            const r = (num >> 16) + percent;
+            const g = ((num >> 8) & 0x00FF) + percent;
+            const b = (num & 0x0000FF) + percent;
+            return '#' + (0x1000000 + (r < 255 ? (r < 0 ? 0 : r) : 255) * 0x10000 + 
+                (g < 255 ? (g < 0 ? 0 : g) : 255) * 0x100 + 
+                (b < 255 ? (b < 0 ? 0 : b) : 255)).toString(16).slice(1);
+        };
+
+        const applyTransform = () => {
             const canvas = document.getElementById('mindmapCanvas');
             canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
             document.getElementById('zoomLevel').innerText = Math.round(currentScale * 100) + '%';
-            drawLines(); // Redraw lines with new transform
-        }
+            renderBranches();
+        };
 
-        function zoomIn() {
-            if (currentScale < MAX_SCALE) {
-                // Zoom toward center of viewport
-                const viewport = document.getElementById('viewport');
-                const rect = viewport.getBoundingClientRect();
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                
-                // Adjust pan to zoom toward center
-                const scaleChange = 0.2;
-                const newScale = Math.min(MAX_SCALE, currentScale + scaleChange);
-                
-                // Calculate new pan to keep center point stable
-                panX = panX - (centerX / currentScale) * (scaleChange / (currentScale + scaleChange));
-                panY = panY - (centerY / currentScale) * (scaleChange / (currentScale + scaleChange));
-                
-                currentScale = newScale;
-                applyTransform();
-            }
-        }
+        // ==================== DRAG SETUP ====================
+        const setupDraggable = (card, node) => {
+            interact(card).draggable({
+                inertia: false,
+                modifiers: [],
+                autoScroll: false,
+                listeners: {
+                    start(event) {
+                        isPanning = false;
+                        
+                        const target = event.target;
+                        const rect = target.getBoundingClientRect();
+                        
+                        interact(target).set({
+                            modifiers: [
+                                interact.modifiers.restrict({
+                                    restriction: 'parent',
+                                    elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
+                                })
+                            ]
+                        });
 
-        function zoomOut() {
-            if (currentScale > MIN_SCALE) {
-                const viewport = document.getElementById('viewport');
-                const rect = viewport.getBoundingClientRect();
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                
-                const scaleChange = 0.2;
-                const newScale = Math.max(MIN_SCALE, currentScale - scaleChange);
-                
-                panX = panX + (centerX / newScale) * (scaleChange / currentScale);
-                panY = panY + (centerY / newScale) * (scaleChange / currentScale);
-                
-                currentScale = newScale;
-                applyTransform();
-            }
-        }
+                        dragOffsets.set(target.id, {
+                            x: event.clientX - rect.left,
+                            y: event.clientY - rect.top
+                        });
+                    },
+                    
+                    move(event) {
+                        const target = event.target;
+                        const offset = dragOffsets.get(target.id);
+                        if (!offset) return;
 
-        function zoomReset() {
-            currentScale = 1.0;
-            panX = 0;
-            panY = 0;
+                        const viewport = document.getElementById('viewport');
+                        const viewportRect = viewport.getBoundingClientRect();
+
+                        // Calculate screen position
+                        let screenX = event.clientX - offset.x;
+                        let screenY = event.clientY - offset.y;
+
+                        // Convert to canvas coordinates
+                        const viewportX = screenX - viewportRect.left;
+                        const viewportY = screenY - viewportRect.top;
+
+                        const canvasX = (viewportX - panX) / currentScale;
+                        const canvasY = (viewportY - panY) / currentScale;
+
+                        // Update position
+                        target.style.left = canvasX + 'px';
+                        target.style.top = canvasY + 'px';
+
+                        // Update model
+                        const nodeId = target.getAttribute('data-id');
+                        const node = findNodeById(mindmap, nodeId);
+                        if (node) {
+                            node.x = canvasX;
+                            node.y = canvasY;
+                        }
+
+                        // Redraw branches
+                        renderBranches();
+                    },
+                    
+                    end(event) {
+                        dragOffsets.delete(event.target.id);
+                    }
+                }
+            });
+        };
+
+        const renderMindMap = () => {
+            const canvas = document.getElementById('mindmapCanvas');
+            
+            // Remove all nodes except branch container
+            Array.from(canvas.children).forEach(el => {
+                if (el.className !== 'branch-container') el.remove();
+            });
+            
+            nodeMap.clear();
+            dragOffsets.clear();
+
+            const addNode = (node) => {
+                const card = document.createElement('div');
+                card.className = 'node-card';
+                card.id = 'node-' + node.id;
+                card.setAttribute('data-id', node.id);
+                card.style.left = node.x + 'px';
+                card.style.top = node.y + 'px';
+                card.style.borderLeftColor = node.color || '#2d6bcb';
+                card.style.backgroundColor = node.color 
+                    ? (darkMode ? node.color + '40' : node.color + '20')
+                    : (darkMode ? '#2a2f3c' : 'rgba(255,255,255,0.95)');
+                card.innerHTML = `<div>${node.name}</div><div class="drag-handle"><i class="fas fa-grip-lines"></i></div>`;
+
+                // Double-click edit
+                card.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    currentNodeToEdit = node.id;
+                    document.getElementById('editNodeId').innerText = node.id;
+                    document.getElementById('editNodeName').value = node.name;
+                    document.getElementById('editModal').classList.add('show');
+                });
+
+                canvas.appendChild(card);
+                nodeMap.set(node.id, card);
+
+                // Setup draggable
+                setupDraggable(card, node);
+
+                // Add children if not collapsed
+                if (!collapsedNodes.has(node.id) && node.children) {
+                    node.children.forEach(child => addNode(child));
+                }
+            };
+
+            addNode(mindmap);
             applyTransform();
-        }
+            renderBranches();
+        };
 
-        // Pan with mouse drag
-        function setupPanning() {
+        const refresh = () => {
+            renderTreeView();
+            renderMindMap();
+        };
+
+        // ==================== ZOOM & PAN ====================
+        const setupPanning = () => {
             const viewport = document.getElementById('viewport');
             
             viewport.addEventListener('mousedown', (e) => {
-                // Only pan when not dragging a node (check if target is viewport or background)
-                if (e.target === viewport || e.target.id === 'mindmapCanvas' || e.target.tagName === 'svg') {
+                if (e.target === viewport || e.target.id === 'mindmapCanvas' || e.target.className === 'branch-container') {
                     isPanning = true;
                     startPanX = e.clientX - panX;
                     startPanY = e.clientY - panY;
                     viewport.classList.add('panning');
-                    viewport.style.cursor = 'grabbing';
                 }
             });
 
@@ -683,245 +889,296 @@
             window.addEventListener('mouseup', () => {
                 isPanning = false;
                 viewport.classList.remove('panning');
-                viewport.style.cursor = 'grab';
             });
-        }
+        };
 
-        function renderMindMap() {
-            const canvas = document.getElementById('mindmapCanvas');
-            Array.from(canvas.children).forEach(el => { if (el.id !== 'branchSvg') el.remove(); });
-            nodeMap.clear();
-
-            function addNode(node) {
-                const card = document.createElement('div');
-                card.className = 'node-card';
-                card.id = 'node-' + node.id;
-                card.setAttribute('data-id', node.id);
-                card.style.left = node.x + 'px';
-                card.style.top = node.y + 'px';
-                card.style.borderLeftColor = node.color || '#2d6bcb';
-                card.style.backgroundColor = node.color ? (darkMode ? node.color+'40' : node.color+'20') : (darkMode ? '#2a2f3c' : 'rgba(255,255,255,0.95)');
-                card.innerHTML = `<div>${node.name}</div><div class="drag-handle"><i class="fas fa-grip-lines"></i></div>`;
-
-                card.addEventListener('dblclick', (e) => {
-                    e.stopPropagation();
-                    currentNodeToEdit = node.id;
-                    document.getElementById('editNodeId').innerText = node.id;
-                    document.getElementById('editNodeName').value = node.name;
-                    document.getElementById('editModal').classList.add('show');
-                });
-
-                canvas.appendChild(card);
-                nodeMap.set(node.id, card);
-
-                interact(card).draggable({
-                    inertia: false,
-                    modifiers: [],
-                    autoScroll: false,
-                    listeners: {
-                        start (event) {
-                            const target = event.target;
-                            const rect = target.getBoundingClientRect();
-                            dragOffsets.set(target.id, {
-                                x: event.clientX - rect.left,
-                                y: event.clientY - rect.top
-                            });
-                        },
-                        move (event) {
-                            const target = event.target;
-                            const offset = dragOffsets.get(target.id);
-                            if (!offset) return;
-
-                            // Account for current pan and zoom
-                            const x = (event.clientX - offset.x - panX) / currentScale;
-                            const y = (event.clientY - offset.y - panY) / currentScale;
-
-                            target.style.left = x + 'px';
-                            target.style.top = y + 'px';
-
-                            const nodeId = target.getAttribute('data-id');
-                            const node = findNodeById(mindmap, nodeId);
-                            if (node) {
-                                node.x = x;
-                                node.y = y;
-                            }
-
-                            drawLines();
-                        },
-                        end (event) {
-                            dragOffsets.delete(event.target.id);
-                        }
-                    }
-                });
-
-                if (!collapsedNodes.has(node.id) && node.children) {
-                    node.children.forEach(child => addNode(child));
-                }
+        const zoomIn = () => {
+            if (currentScale < MAX_SCALE) {
+                const viewport = document.getElementById('viewport');
+                const rect = viewport.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const newScale = Math.min(MAX_SCALE, currentScale + 0.2);
+                
+                panX = panX - (centerX / currentScale) * (0.2 / newScale);
+                panY = panY - (centerY / currentScale) * (0.2 / newScale);
+                
+                currentScale = newScale;
+                applyTransform();
             }
+        };
 
-            addNode(mindmap);
+        const zoomOut = () => {
+            if (currentScale > MIN_SCALE) {
+                const viewport = document.getElementById('viewport');
+                const rect = viewport.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const newScale = Math.max(MIN_SCALE, currentScale - 0.2);
+                
+                panX = panX + (centerX / newScale) * (0.2 / currentScale);
+                panY = panY + (centerY / newScale) * (0.2 / currentScale);
+                
+                currentScale = newScale;
+                applyTransform();
+            }
+        };
+
+        const zoomReset = () => {
+            currentScale = 1.0;
+            panX = 0;
+            panY = 0;
             applyTransform();
-            drawLines();
+        };
+
+        // ==================== EVENT HANDLERS ====================
+        // Theme toggle
+        if (darkMode) {
+            document.body.classList.add('dark-mode');
+            document.getElementById('appContainer').classList.add('dark-mode');
+            document.getElementById('themeToggle').innerHTML = '<i class="fas fa-sun"></i> Light';
         }
 
-        function refresh() {
-            renderTreeView();
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            document.getElementById('appContainer').classList.toggle('dark-mode');
+            const btn = document.getElementById('themeToggle');
+            
+            if (document.body.classList.contains('dark-mode')) {
+                btn.innerHTML = '<i class="fas fa-sun"></i> Light';
+                localStorage.setItem('canvas-dark', 'true');
+                darkMode = true;
+            } else {
+                btn.innerHTML = '<i class="fas fa-moon"></i> Dark';
+                localStorage.setItem('canvas-dark', 'false');
+                darkMode = false;
+            }
+            
             renderMindMap();
-        }
+        });
 
-        // Initialize panning
-        setupPanning();
-
-        // button handlers
-        document.getElementById('addRootBtn').addEventListener('click', ()=>{
-            const newName = prompt('New root name:');
+        // Add root
+        document.getElementById('addRootBtn').addEventListener('click', () => {
+            const newName = prompt('Enter new root name:');
             if (!newName) return;
-            const oldRoot = mindmap;
-            mindmap = { 
-                id: generateId(), 
-                name: newName, 
-                color: '#3b6bb0', 
-                x: 600, y: 150, 
-                children: [oldRoot] 
+            
+            const oldRoot = JSON.parse(JSON.stringify(mindmap));
+            mindmap = {
+                id: generateId(),
+                name: newName,
+                color: '#3b6bb0',
+                x: 600,
+                y: 150,
+                children: [oldRoot]
             };
+            
             collapsedNodes.clear();
             refresh();
         });
 
-        document.getElementById('addChildBtn').addEventListener('click', ()=>{
-            let targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):');
-            if (!targetId) targetId = mindmap.id;
+        // Add child
+        document.getElementById('addChildBtn').addEventListener('click', () => {
+            const targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):') || mindmap.id;
             const node = findNodeById(mindmap, targetId);
-            if (!node) { alert('Node not found'); return; }
+            
+            if (!node) {
+                alert('Node not found!');
+                return;
+            }
+            
             const newName = prompt('Enter child name:');
             if (!newName) return;
+            
             const newX = node.x + 120;
             const newY = node.y + 100;
-            node.children.push({ 
-                id: generateId(), 
-                name: newName, 
-                color: '#7f8c8d', 
-                x: newX, 
-                y: newY, 
-                children: [] 
+            
+            node.children.push({
+                id: generateId(),
+                name: newName,
+                color: '#7f8c8d',
+                x: newX,
+                y: newY,
+                children: []
             });
+            
             refresh();
         });
 
-        document.getElementById('editNodeBtn').addEventListener('click', ()=>{
-            let id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):');
-            if (!id) id = mindmap.id;
+        // Edit node
+        document.getElementById('editNodeBtn').addEventListener('click', () => {
+            const id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):') || mindmap.id;
             const node = findNodeById(mindmap, id);
-            if (!node) { alert('Node not found'); return; }
+            
+            if (!node) {
+                alert('Node not found!');
+                return;
+            }
+            
             currentNodeToEdit = id;
             document.getElementById('editNodeId').innerText = id;
             document.getElementById('editNodeName').value = node.name;
             document.getElementById('editModal').classList.add('show');
         });
 
-        document.getElementById('applyColorBtn').addEventListener('click', ()=>{
-            let id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):');
-            if (!id) id = mindmap.id;
+        // Apply color
+        document.getElementById('applyColorBtn').addEventListener('click', () => {
+            const id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):') || mindmap.id;
             const node = findNodeById(mindmap, id);
-            if (!node) { alert('Node not found'); return; }
+            
+            if (!node) {
+                alert('Node not found!');
+                return;
+            }
+            
             currentNodeToColor = id;
             document.getElementById('colorNodeId').innerText = id;
             document.getElementById('nodeColorModalPicker').value = node.color || '#2d6bcb';
             document.getElementById('colorModal').classList.add('show');
         });
 
-        document.getElementById('resetLayoutBtn').addEventListener('click', ()=>{
-            function layout(node, x, y, xOffset = 180, yOffset = 120) {
-                node.x = x; node.y = y;
+        // Reset layout
+        document.getElementById('resetLayoutBtn').addEventListener('click', () => {
+            const layout = (node, x, y, xOffset = 180, yOffset = 120) => {
+                node.x = x;
+                node.y = y;
+                
                 if (node.children) {
                     node.children.forEach((child, i) => {
-                        layout(child, x + xOffset + i*30, y + yOffset, xOffset * 0.8, yOffset);
+                        layout(child, x + xOffset + i * 30, y + yOffset, xOffset * 0.8, yOffset);
                     });
                 }
-            }
+            };
+            
             layout(mindmap, 600, 150);
             refresh();
         });
 
-        document.getElementById('collapseToggleBtn').addEventListener('click', ()=>{
-            let id = prompt('Enter node ID to collapse/expand:');
+        // Collapse/expand toggle
+        document.getElementById('collapseToggleBtn').addEventListener('click', () => {
+            const id = prompt('Enter node ID to collapse/expand:');
             if (!id) return;
+            
             const node = findNodeById(mindmap, id);
-            if (!node || !node.children || node.children.length === 0) {
+            if (!node || !node.children?.length) {
                 alert('Node has no children');
                 return;
             }
-            if (collapsedNodes.has(id)) collapsedNodes.delete(id);
-            else collapsedNodes.add(id);
+            
+            if (collapsedNodes.has(id)) {
+                collapsedNodes.delete(id);
+            } else {
+                collapsedNodes.add(id);
+            }
+            
             refresh();
         });
 
-        document.getElementById('fullscreenBtn').addEventListener('click', ()=>{
+        // Collapse all
+        document.getElementById('collapseAllBtn').addEventListener('click', () => {
+            getAllNodes().forEach(node => {
+                if (node.children?.length) {
+                    collapsedNodes.add(node.id);
+                }
+            });
+            refresh();
+        });
+
+        // Expand all
+        document.getElementById('expandAllBtn').addEventListener('click', () => {
+            collapsedNodes.clear();
+            refresh();
+        });
+
+        // Fullscreen
+        document.getElementById('fullscreenBtn').addEventListener('click', () => {
             const container = document.getElementById('appContainer');
             container.classList.toggle('fullscreen');
             const btn = document.getElementById('fullscreenBtn');
+            
             if (container.classList.contains('fullscreen')) {
                 btn.innerHTML = '<i class="fas fa-compress"></i> Exit';
             } else {
                 btn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
             }
-            setTimeout(() => drawLines(), 100);
+            
+            setTimeout(renderBranches, 100);
         });
 
+        // Zoom controls
         document.getElementById('zoomIn').addEventListener('click', zoomIn);
         document.getElementById('zoomOut').addEventListener('click', zoomOut);
         document.getElementById('zoomReset').addEventListener('click', zoomReset);
 
-        document.getElementById('exportBtn').addEventListener('click', ()=>{
+        // Export
+        document.getElementById('exportBtn').addEventListener('click', () => {
             const dataStr = JSON.stringify(mindmap, null, 2);
-            const blob = new Blob([dataStr], {type:'application/json'});
+            const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = 'flux-mindmap.json'; a.click();
+            a.href = url;
+            a.download = 'canvas-mindmap.json';
+            a.click();
             URL.revokeObjectURL(url);
         });
 
-        document.getElementById('shareBtn').addEventListener('click', ()=>{
+        // Share
+        document.getElementById('shareBtn').addEventListener('click', () => {
             document.getElementById('shareData').value = JSON.stringify(mindmap, null, 2);
             document.getElementById('shareModal').classList.add('show');
         });
 
-        document.getElementById('cancelEdit').addEventListener('click', ()=> {
+        // Modal buttons
+        document.getElementById('cancelEdit').addEventListener('click', () => {
             document.getElementById('editModal').classList.remove('show');
         });
-        document.getElementById('saveEdit').addEventListener('click', ()=>{
+
+        document.getElementById('saveEdit').addEventListener('click', () => {
             const newName = document.getElementById('editNodeName').value.trim();
-            if (!newName) { alert('Name cannot be empty'); return; }
+            if (!newName) {
+                alert('Name cannot be empty');
+                return;
+            }
+            
             if (currentNodeToEdit) {
                 const node = findNodeById(mindmap, currentNodeToEdit);
                 if (node) node.name = newName;
             }
+            
             document.getElementById('editModal').classList.remove('show');
             refresh();
         });
 
-        document.getElementById('cancelColor').addEventListener('click', ()=> {
+        document.getElementById('cancelColor').addEventListener('click', () => {
             document.getElementById('colorModal').classList.remove('show');
         });
-        document.getElementById('applyColorModal').addEventListener('click', ()=>{
+
+        document.getElementById('applyColorModal').addEventListener('click', () => {
             const newColor = document.getElementById('nodeColorModalPicker').value;
+            
             if (currentNodeToColor) {
                 const node = findNodeById(mindmap, currentNodeToColor);
                 if (node) node.color = newColor;
             }
+            
             document.getElementById('colorModal').classList.remove('show');
             refresh();
         });
 
-        document.getElementById('closeShareBtn').addEventListener('click', ()=> {
+        document.getElementById('closeShareBtn').addEventListener('click', () => {
             document.getElementById('shareModal').classList.remove('show');
         });
-        document.getElementById('copyShareBtn').addEventListener('click', ()=>{
-            navigator.clipboard.writeText(JSON.stringify(mindmap, null, 2));
-            alert('Copied!');
+
+        document.getElementById('copyShareBtn').addEventListener('click', () => {
+            const data = document.getElementById('shareData').value;
+            navigator.clipboard.writeText(data).then(() => {
+                alert('Copied to clipboard!');
+            });
         });
 
-        ['editModal','colorModal','shareModal'].forEach(id => {
+        // Close modals on overlay click
+        ['editModal', 'colorModal', 'shareModal'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
                 if (e.target.classList.contains('modal-overlay')) {
                     document.getElementById(id).classList.remove('show');
@@ -929,7 +1186,12 @@
             });
         });
 
+        // Initialize
+        setupPanning();
         refresh();
+
+        // Redraw branches on window resize
+        window.addEventListener('resize', renderBranches);
     })();
 </script>
 </body>
