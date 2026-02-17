@@ -1,49 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>flux · perfect zoom & pan</title>
-    <!-- Font Awesome & Inter -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- interact.js for smooth drag -->
-    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.17/dist/interact.min.js"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background: linear-gradient(145deg, #f0f5fe 0%, #e9f0fa 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            transition: background 0.3s;
-        }
-
-        body.dark-mode {
-            background: linear-gradient(145deg, #1a1f2b 0%, #0f1219 100%);
-        }
-
-        .app-container {
-            width: 1400px;
-            max-width: 100%;
-            height: 90vh;
-            background: rgba(255,255,255,0.7);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border-radius: 42px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.5);
-            transition: all 0.3s;
+<head> 
         }
 
         .app-container.dark-mode {
@@ -54,40 +11,7 @@
 
         .app-container.fullscreen {
             width: 100vw;
-            height: 100vh;
-            border-radius: 0;
-            margin: 0;
-        }
-
-        .toolbar {
-            padding: 18px 28px;
-            background: rgba(255,255,255,0.4);
-            border-bottom: 1px solid rgba(255,255,255,0.6);
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            flex-shrink: 0;
-            transition: background 0.3s;
-        }
-
-        .dark-mode .toolbar {
-            background: rgba(30, 35, 48, 0.6);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .logo h1 {
-            font-weight: 600;
-            font-size: 1.6rem;
-            color: #1b2b4b;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: color 0.3s;
-        }
-
-        .dark-mode .logo h1 {
+            height: 100vh; 
             color: #e0e5f0;
         }
 
