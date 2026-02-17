@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>flux · dark mode + fixed zoom</title>
+    <title>flux</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -17,7 +17,7 @@
 
         body {
             font-family: 'Inter', system-ui, sans-serif;
-            background: linear-gradient(145deg, #f0f5fe 0%, #e9f0fa 100%);
+            background: linear-gradient(145deg, #1a2635 0%, #111b28 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -26,73 +26,50 @@
             transition: background 0.3s;
         }
 
-        body.dark-mode {
-            background: linear-gradient(145deg, #1a1f2b 0%, #0f1219 100%);
+        /* night mode by default */
+        body {
+            background: linear-gradient(145deg, #1a2635 0%, #111b28 100%);
         }
 
         .app-container {
             width: 1400px;
             max-width: 100%;
             height: 90vh;
-            background: rgba(255,255,255,0.7);
+            background: rgba(20, 30, 45, 0.8);
             backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
             border-radius: 42px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.5);
-            transition: all 0.3s;
-        }
-
-        .app-container.dark-mode {
-            background: rgba(20, 25, 36, 0.8);
-            border-color: rgba(255,255,255,0.1);
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
-        }
-
-        .app-container.fullscreen {
-            width: 100vw;
-            height: 100vh;
-            border-radius: 0;
-            margin: 0;
+            border: 1px solid rgba(70, 100, 150, 0.3);
+            transition: background 0.3s, border-color 0.3s;
         }
 
         .toolbar {
             padding: 18px 28px;
-            background: rgba(255,255,255,0.4);
-            border-bottom: 1px solid rgba(255,255,255,0.6);
+            background: rgba(30, 40, 60, 0.5);
+            border-bottom: 1px solid rgba(100, 140, 200, 0.2);
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
             gap: 16px;
-            flex-shrink: 0;
             transition: background 0.3s;
-        }
-
-        .dark-mode .toolbar {
-            background: rgba(30, 35, 48, 0.6);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
         .logo h1 {
             font-weight: 600;
             font-size: 1.6rem;
-            color: #1b2b4b;
+            color: #cfdff5;
             display: flex;
             align-items: center;
             gap: 6px;
-            transition: color 0.3s;
-        }
-
-        .dark-mode .logo h1 {
-            color: #e0e5f0;
         }
 
         .logo i {
-            color: #2d6bcb;
+            color: #7aa9ff;
             font-size: 1.9rem;
         }
 
@@ -103,120 +80,71 @@
         }
 
         .btn {
-            background: rgba(255,255,255,0.75);
-            border: 1px solid rgba(46, 91, 150, 0.2);
+            background: rgba(40, 55, 80, 0.8);
+            border: 1px solid rgba(100, 150, 220, 0.3);
             padding: 10px 18px;
             border-radius: 40px;
             font-weight: 500;
-            color: #152b44;
+            color: #d0e0ff;
             font-size: 0.95rem;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            transition: all 0.2s;
-        }
-
-        .dark-mode .btn {
-            background: rgba(45, 52, 68, 0.8);
-            border-color: rgba(255,255,255,0.1);
-            color: #e0e5f0;
+            transition: 0.2s;
         }
 
         .btn i {
-            color: #2d6bcb;
-        }
-
-        .dark-mode .btn i {
-            color: #6d9eff;
+            color: #7aa9ff;
         }
 
         .btn:hover {
-            background: white;
-            border-color: #2d6bcb80;
+            background: #2a3b55;
+            border-color: #7aa9ff80;
             transform: translateY(-1px);
         }
 
-        .dark-mode .btn:hover {
-            background: #3a435c;
-        }
-
         .btn.share-btn {
-            background: #1d3d6d;
+            background: #2d4b7a;
             color: white;
         }
         .btn.share-btn i { color: white; }
-
-        .dark-mode .btn.share-btn {
-            background: #2d4b7a;
-        }
-
-        .zoom-indicator {
-            background: rgba(255,255,255,0.5);
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-weight: 600;
-            color: #1d3d6d;
-            font-size: 0.9rem;
-        }
-
-        .dark-mode .zoom-indicator {
-            background: rgba(30, 35, 48, 0.8);
-            color: #e0e5f0;
-        }
 
         .workspace {
             display: flex;
             flex: 1;
             min-height: 0;
-            position: relative;
         }
 
         /* left panel */
         .structure-panel {
             width: 260px;
-            background: rgba(245, 248, 255, 0.7);
+            background: rgba(30, 40, 58, 0.7);
             backdrop-filter: blur(12px);
-            border-right: 1px solid rgba(255,255,255,0.7);
+            border-right: 1px solid rgba(80, 120, 180, 0.2);
             padding: 20px 14px;
             display: flex;
             flex-direction: column;
             gap: 24px;
             overflow-y: auto;
-            flex-shrink: 0;
-            transition: background 0.3s;
-        }
-
-        .dark-mode .structure-panel {
-            background: rgba(30, 35, 48, 0.6);
-            border-right: 1px solid rgba(255,255,255,0.1);
         }
 
         .panel-section {
-            background: rgba(255,255,255,0.4);
+            background: rgba(40, 55, 80, 0.4);
             border-radius: 32px;
             padding: 18px 14px;
-            border: 1px solid rgba(255,255,255,0.6);
-        }
-
-        .dark-mode .panel-section {
-            background: rgba(45, 52, 68, 0.4);
-            border-color: rgba(255,255,255,0.1);
+            border: 1px solid rgba(100, 140, 200, 0.2);
         }
 
         .section-title {
             font-size: 0.8rem;
             text-transform: uppercase;
-            color: #31567e;
+            color: #a0c0f0;
             font-weight: 600;
             margin-bottom: 16px;
             display: flex;
             align-items: center;
             gap: 6px;
-        }
-
-        .dark-mode .section-title {
-            color: #a0b0d0;
         }
 
         .tree-view {
@@ -225,79 +153,55 @@
         .tree-node {
             padding: 8px 8px 8px 20px;
             margin: 4px 0;
-            background: rgba(255,255,255,0.3);
+            background: rgba(50, 70, 100, 0.3);
             border-radius: 30px;
-            border: 1px solid rgba(255,255,255,0.7);
+            border: 1px solid rgba(120, 160, 220, 0.2);
             display: flex;
             align-items: center;
             gap: 6px;
             cursor: pointer;
-            transition: background 0.3s;
+            color: #d0e0ff;
         }
-
-        .dark-mode .tree-node {
-            background: rgba(45, 52, 68, 0.4);
-            border-color: rgba(255,255,255,0.1);
-            color: #e0e5f0;
-        }
-
-        .tree-node i { color: #2d6bcb; width: 20px; }
+        .tree-node i { color: #7aa9ff; width: 20px; }
         .tree-node .label { flex:1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* main canvas */
         .mindmap-area {
             flex: 1;
-            background: rgba(255,255,255,0.25);
+            background: rgba(10, 20, 30, 0.4);
             backdrop-filter: blur(6px);
             position: relative;
-            overflow: hidden;
-        }
-
-        .dark-mode .mindmap-area {
-            background: rgba(0,0,0,0.3);
-        }
-
-        #viewport {
-            width: 100%;
-            height: 100%;
             overflow: auto;
-            position: relative;
-            cursor: default;
         }
 
         #mindmapCanvas {
             position: relative;
-            transform-origin: 0 0;
-            width: 3000px;
-            height: 2000px;
+            width: 100%;
+            height: 100%;
+            min-width: 100%;
+            min-height: 100%;
         }
 
         /* node cards */
         .node-card {
             position: absolute;
-            background: rgba(255,255,255,0.95);
+            background: rgba(30, 45, 68, 0.95);
             backdrop-filter: blur(4px);
             border-radius: 32px;
             padding: 16px 24px;
-            box-shadow: 0 12px 28px -10px rgba(20,45,90,0.4);
+            box-shadow: 0 12px 28px -10px #00000080;
             border: 2px solid transparent;
             border-left: 6px solid;
             min-width: 150px;
             text-align: center;
             cursor: grab;
             user-select: none;
-            transition: box-shadow 0.1s, background 0.3s;
+            transition: box-shadow 0.1s;
             font-weight: 500;
-            color: #11223b;
+            color: #e0edff;
             will-change: transform;
             touch-action: none;
             z-index: 100;
-        }
-
-        .dark-mode .node-card {
-            background: rgba(35, 42, 58, 0.95);
-            color: #e0e5f0;
-            box-shadow: 0 12px 28px -10px rgba(0,0,0,0.8);
         }
 
         .node-card:active {
@@ -311,15 +215,11 @@
             top: 8px;
             right: 12px;
             font-size: 0.9rem;
-            color: #94a9c9;
+            color: #a0b8d0;
             cursor: grab;
         }
 
-        .dark-mode .node-card .drag-handle {
-            color: #6a7a9a;
-        }
-
-        /* branch lines - FIXED: now using absolute positioning within canvas */
+        /* branch lines */
         .branch-layer {
             position: absolute;
             top: 0;
@@ -330,108 +230,61 @@
             z-index: 50;
         }
 
+        .branch-layer svg {
+            width: 100%;
+            height: 100%;
+        }
+
         .branch-line {
-            stroke: #94a9c9;
+            stroke: #5a7aac;
             stroke-width: 2.5;
             stroke-dasharray: 5,3;
             filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
         }
 
-        .dark-mode .branch-line {
-            stroke: #4a5a7a;
+        /* context menu */
+        .context-menu {
+            position: fixed;
+            background: rgba(30, 45, 68, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 28px;
+            padding: 8px 0;
+            min-width: 180px;
+            box-shadow: 0 20px 40px -12px #00000080;
+            border: 1px solid #3a5070;
+            z-index: 30000;
+            display: none;
         }
+        .context-menu.show { display: block; }
+        .context-menu-item {
+            padding: 12px 22px;
+            font-size: 0.95rem;
+            color: #d0e0ff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: 0.1s;
+        }
+        .context-menu-item i { color: #7aa9ff; width: 20px; }
+        .context-menu-item:hover { background: #2a405e; }
 
         /* color picker */
         .color-picker-wrapper {
             display: flex;
             align-items: center;
             gap: 8px;
-            background: rgba(255,255,255,0.5);
+            background: rgba(50, 70, 100, 0.5);
             padding: 5px 15px;
             border-radius: 40px;
         }
-
-        .dark-mode .color-picker-wrapper {
-            background: rgba(45, 52, 68, 0.6);
-        }
-
         #nodeColorPicker { width: 40px; height: 40px; border-radius: 40px; border: 2px solid white; cursor: pointer; }
 
-        /* zoom controls */
-        .zoom-controls {
-            position: absolute;
-            bottom: 24px;
-            right: 24px;
-            display: flex;
-            gap: 10px;
-            background: rgba(255,255,255,0.6);
-            backdrop-filter: blur(8px);
-            padding: 12px 18px;
-            border-radius: 60px;
-            border: 1px solid rgba(255,255,255,0.9);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
-
-        .dark-mode .zoom-controls {
-            background: rgba(30, 35, 48, 0.8);
-            border-color: rgba(255,255,255,0.2);
-        }
-
-        .zoom-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 44px;
-            background: white;
-            border: none;
-            font-size: 1.3rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #1d3d6d;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .dark-mode .zoom-btn {
-            background: #3a435c;
-            color: #e0e5f0;
-        }
-
-        .zoom-btn:hover {
-            background: #f0f5ff;
-        }
-
-        .dark-mode .zoom-btn:hover {
-            background: #4a5570;
-        }
-
-        #zoomLevel {
-            min-width: 70px;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        /* dark mode toggle */
-        .theme-toggle {
-            background: rgba(255,255,255,0.75);
-            border: 1px solid rgba(46, 91, 150, 0.2);
-            padding: 10px 18px;
-            border-radius: 40px;
-            cursor: pointer;
-        }
-
-        .dark-mode .theme-toggle {
-            background: rgba(45, 52, 68, 0.8);
-            border-color: rgba(255,255,255,0.1);
-            color: #e0e5f0;
-        }
-
-        /* modals with dark mode support */
+        /* modals */
         .modal-overlay {
             position: fixed;
             top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.5);
             backdrop-filter: blur(6px);
             display: flex;
             align-items: center;
@@ -443,139 +296,111 @@
         }
         .modal-overlay.show { visibility: visible; opacity: 1; }
         .modal-card {
-            background: rgba(255,255,255,0.95);
+            background: rgba(30, 45, 68, 0.95);
             backdrop-filter: blur(20px);
             border-radius: 48px;
             padding: 36px 40px;
             width: 400px;
             max-width: 90%;
-            box-shadow: 0 40px 70px -15px #11203570;
+            box-shadow: 0 40px 70px -15px #00000070;
+            color: #e0edff;
         }
-
-        .dark-mode .modal-card {
-            background: rgba(30, 35, 48, 0.95);
-            color: #e0e5f0;
-        }
-
         .input-group { margin-bottom: 24px; }
-        .input-group label { font-weight: 500; color: #2f496e; display: block; margin-bottom: 6px; }
-        .dark-mode .input-group label { color: #a0b0d0; }
+        .input-group label { font-weight: 500; color: #a0b8d0; display: block; margin-bottom: 6px; }
         .input-group input, .input-group textarea {
             width: 100%;
             padding: 15px 20px;
             border-radius: 50px;
-            border: 1px solid #d6e2f0;
+            border: 1px solid #3a5070;
             font-size: 1rem;
-            background: white;
-        }
-        .dark-mode .input-group input,
-        .dark-mode .input-group textarea {
-            background: #2a2f3c;
-            border-color: #3a435c;
-            color: #e0e5f0;
+            background: #1e2b3c;
+            color: white;
         }
         .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
     </style>
 </head>
 <body>
-<div class="app-container" id="appContainer">
+<div class="app-container">
     <div class="toolbar">
         <div class="logo"><h1><i class="fas fa-arrows-up-down-left-right"></i> flux</h1></div>
         <div class="action-buttons">
-            <button class="btn theme-toggle" id="themeToggle"><i class="fas fa-moon"></i> Dark</button>
-            <button class="btn" id="addRootBtn"><i class="fas fa-plus-circle"></i> New root</button>
-            <button class="btn" id="addChildBtn"><i class="fas fa-sitemap"></i> Add child</button>
-            <button class="btn" id="editNodeBtn"><i class="fas fa-pen-fancy"></i> Edit</button>
+            <button class="btn" id="nightModeBtn"><i class="fas fa-sun"></i> Modo día</button>
+            <button class="btn" id="addRootBtn"><i class="fas fa-plus-circle"></i> Nueva raíz</button>
+            <button class="btn" id="addChildBtn"><i class="fas fa-sitemap"></i> Añadir hijo</button>
+            <button class="btn" id="editNodeBtn"><i class="fas fa-pen-fancy"></i> Editar</button>
             <div class="color-picker-wrapper">
                 <label><i class="fas fa-palette"></i></label>
                 <input type="color" id="nodeColorPicker" value="#2d6bcb">
             </div>
-            <button class="btn" id="applyColorBtn"><i class="fas fa-fill-drip"></i> Apply color</button>
-            <button class="btn" id="resetLayoutBtn"><i class="fas fa-rotate"></i> Reset</button>
-            <button class="btn" id="fullscreenBtn"><i class="fas fa-expand"></i> Fullscreen</button>
-            <button class="btn" id="exportBtn"><i class="fas fa-download"></i> Export</button>
-            <button class="btn share-btn" id="shareBtn"><i class="fas fa-share-nodes"></i> Share</button>
+            <button class="btn" id="applyColorBtn"><i class="fas fa-fill-drip"></i> Aplicar color</button>
+            <button class="btn" id="resetLayoutBtn"><i class="fas fa-rotate"></i> Reordenar</button>
+            <button class="btn" id="exportBtn"><i class="fas fa-download"></i> Exportar</button>
+            <button class="btn" id="loadBtn"><i class="fas fa-upload"></i> Cargar mapa</button>
+            <button class="btn share-btn" id="shareBtn"><i class="fas fa-share-nodes"></i> Compartir</button>
         </div>
     </div>
     <div class="workspace">
         <div class="structure-panel">
             <div class="panel-section">
-                <div class="section-title"><i class="fas fa-diagram-project"></i> branches</div>
+                <div class="section-title"><i class="fas fa-diagram-project"></i> ramas</div>
                 <div class="tree-view" id="treeView"></div>
-                <button class="btn" id="collapseToggleBtn" style="width:100%; margin-top:12px;"><i class="fas fa-eye-slash"></i> collapse/expand</button>
+                <button class="btn" id="collapseToggleBtn" style="width:100%; margin-top:12px;"><i class="fas fa-eye-slash"></i> colapsar/expandir</button>
             </div>
         </div>
         <div class="mindmap-area" id="mindmapArea">
-            <div id="viewport">
-                <div id="mindmapCanvas">
-                    <svg class="branch-layer" id="branchSvg"></svg>
-                </div>
-            </div>
-            <div class="zoom-controls">
-                <button class="zoom-btn" id="zoomOut"><i class="fas fa-minus"></i></button>
-                <span id="zoomLevel">100%</span>
-                <button class="zoom-btn" id="zoomIn"><i class="fas fa-plus"></i></button>
-                <button class="zoom-btn" id="zoomReset"><i class="fas fa-undo-alt"></i></button>
+            <div id="mindmapCanvas">
+                <svg class="branch-layer" id="branchSvg"></svg>
+                <!-- los nodos se inyectan aquí -->
             </div>
         </div>
     </div>
 </div>
 
-<!-- modals (same as before) -->
-<div class="modal-overlay" id="editModal"><div class="modal-card"><h2>Edit node</h2><div class="input-group"><label>ID: <span id="editNodeId">-</span></label><input type="text" id="editNodeName" placeholder="New name"></div><div class="modal-actions"><button class="btn" id="cancelEdit">Cancel</button><button class="btn share-btn" id="saveEdit">Save</button></div></div></div>
-<div class="modal-overlay" id="colorModal"><div class="modal-card"><h2>Change color</h2><div class="input-group"><label>Node ID: <span id="colorNodeId">-</span></label><input type="color" id="nodeColorModalPicker" value="#2d6bcb"></div><div class="modal-actions"><button class="btn" id="cancelColor">Cancel</button><button class="btn share-btn" id="applyColorModal">Apply</button></div></div></div>
-<div class="modal-overlay" id="shareModal"><div class="modal-card"><h2>Share map</h2><div class="input-group"><textarea id="shareData" rows="5" readonly></textarea></div><div class="modal-actions"><button class="btn" id="copyShareBtn">Copy</button><button class="btn share-btn" id="closeShareBtn">Close</button></div></div></div>
+<!-- menú contextual (español) -->
+<div class="context-menu" id="contextMenu">
+    <div class="context-menu-item" id="ctxEdit"><i class="fas fa-pen"></i> Editar nombre</div>
+    <div class="context-menu-item" id="ctxColor"><i class="fas fa-palette"></i> Cambiar color</div>
+    <div class="context-menu-item" id="ctxAddChild"><i class="fas fa-sitemap"></i> Añadir hijo</div>
+    <div class="context-menu-item" id="ctxCollapse"><i class="fas fa-compress-alt"></i> Colapsar/Expandir</div>
+</div>
+
+<!-- modales en español -->
+<div class="modal-overlay" id="editModal"><div class="modal-card"><h2>Editar nodo</h2><div class="input-group"><label>ID: <span id="editNodeId">-</span></label><input type="text" id="editNodeName" placeholder="Nuevo nombre"></div><div class="modal-actions"><button class="btn" id="cancelEdit">Cancelar</button><button class="btn share-btn" id="saveEdit">Guardar</button></div></div></div>
+<div class="modal-overlay" id="colorModal"><div class="modal-card"><h2>Cambiar color</h2><div class="input-group"><label>ID del nodo: <span id="colorNodeId">-</span></label><input type="color" id="nodeColorModalPicker" value="#2d6bcb"></div><div class="modal-actions"><button class="btn" id="cancelColor">Cancelar</button><button class="btn share-btn" id="applyColorModal">Aplicar</button></div></div></div>
+<div class="modal-overlay" id="shareModal"><div class="modal-card"><h2>Compartir mapa</h2><div class="input-group"><textarea id="shareData" rows="5" readonly></textarea></div><div class="modal-actions"><button class="btn" id="copyShareBtn">Copiar</button><button class="btn share-btn" id="closeShareBtn">Cerrar</button></div></div></div>
+<div class="modal-overlay" id="loadModal"><div class="modal-card"><h2>Cargar mapa</h2><div class="input-group"><label>Pega el JSON o selecciona archivo</label><textarea id="loadData" rows="6" placeholder='{ "id": "root", ... }'></textarea></div><div class="input-group"><input type="file" id="loadFileInput" accept=".json,application/json"></div><div class="modal-actions"><button class="btn" id="cancelLoad">Cancelar</button><button class="btn share-btn" id="confirmLoad">Cargar</button></div></div></div>
 
 <script>
     (function() {
+        // ----- modelo con posiciones
         let mindmap = {
             id: 'root1',
-            name: 'Discovery',
+            name: 'Descubrimiento',
             color: '#3b6bb0',
             x: 600, y: 200,
             children: [
-                { id: 'child1', name: 'Explore', color: '#4a90e2', x: 400, y: 350, children: [] },
-                { id: 'child2', name: 'Tasks', color: '#e67e22', x: 750, y: 350, children: [
-                    { id: 'sub2a', name: 'Design', color: '#2ecc71', x: 650, y: 500, children: [] },
-                    { id: 'sub2b', name: 'Code', color: '#e74c3c', x: 850, y: 500, children: [] }
+                { id: 'child1', name: 'Explorar', color: '#4a90e2', x: 400, y: 350, children: [] },
+                { id: 'child2', name: 'Tareas', color: '#e67e22', x: 750, y: 350, children: [
+                    { id: 'sub2a', name: 'Diseño', color: '#2ecc71', x: 650, y: 500, children: [] },
+                    { id: 'sub2b', name: 'Código', color: '#e74c3c', x: 850, y: 500, children: [] }
                 ]},
-                { id: 'child3', name: 'Notes', color: '#9b59b6', x: 500, y: 520, children: [] }
+                { id: 'child3', name: 'Notas', color: '#9b59b6', x: 500, y: 520, children: [] }
             ]
         };
 
         let collapsedNodes = new Set();
-        let nodeMap = new Map();
+        let nodeMap = new Map(); // id -> elemento DOM
         let dragOffsets = new Map();
-        let currentScale = 1.0;
-        const MIN_SCALE = 0.2;
-        const MAX_SCALE = 3.0;
+        let currentNodeForContext = null;
 
+        // targets para modales
         let currentNodeToEdit = null;
         let currentNodeToColor = null;
 
-        // dark mode state
-        let darkMode = localStorage.getItem('flux-dark') === 'true';
-        if (darkMode) {
-            document.body.classList.add('dark-mode');
-            document.getElementById('appContainer').classList.add('dark-mode');
-            document.getElementById('themeToggle').innerHTML = '<i class="fas fa-sun"></i> Light';
-        }
+        // modo noche (por defecto true)
+        let nightMode = true;
 
-        // theme toggle
-        document.getElementById('themeToggle').addEventListener('click', ()=>{
-            document.body.classList.toggle('dark-mode');
-            document.getElementById('appContainer').classList.toggle('dark-mode');
-            const btn = document.getElementById('themeToggle');
-            if (document.body.classList.contains('dark-mode')) {
-                btn.innerHTML = '<i class="fas fa-sun"></i> Light';
-                localStorage.setItem('flux-dark', 'true');
-            } else {
-                btn.innerHTML = '<i class="fas fa-moon"></i> Dark';
-                localStorage.setItem('flux-dark', 'false');
-            }
-            drawLines(); // redraw lines with new colors
-        });
-
+        // ----- funciones auxiliares
         function generateId() { return 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2,6); }
 
         function findNodeById(node, id) {
@@ -591,13 +416,37 @@
 
         function getAllNodes() { let arr=[]; function t(n){ arr.push(n); n.children?.forEach(t); } t(mindmap); return arr; }
 
+        function isValidMindMap(obj) {
+            return obj && typeof obj === 'object' && typeof obj.id === 'string' && typeof obj.name === 'string' && Array.isArray(obj.children);
+        }
+
+        // ----- toggle modo noche (ahora cambia a modo día)
+        document.getElementById('nightModeBtn').addEventListener('click', ()=>{
+            nightMode = !nightMode;
+            if (nightMode) {
+                // volver a modo oscuro
+                document.body.style.background = 'linear-gradient(145deg, #1a2635 0%, #111b28 100%)';
+                document.querySelector('.app-container').style.background = 'rgba(20, 30, 45, 0.8)';
+                document.querySelector('.app-container').style.borderColor = 'rgba(70, 100, 150, 0.3)';
+                document.getElementById('nightModeBtn').innerHTML = '<i class="fas fa-sun"></i> Modo día';
+            } else {
+                // modo claro
+                document.body.style.background = 'linear-gradient(145deg, #f0f5fe 0%, #e9f0fa 100%)';
+                document.querySelector('.app-container').style.background = 'rgba(255,255,255,0.7)';
+                document.querySelector('.app-container').style.borderColor = 'rgba(255,255,255,0.5)';
+                document.getElementById('nightModeBtn').innerHTML = '<i class="fas fa-moon"></i> Modo noche';
+            }
+            document.body.classList.toggle('night-mode', nightMode);
+        });
+
+        // ----- render tree view (izquierda)
         function renderTreeView() {
             const container = document.getElementById('treeView');
             function r(node, depth=0) {
                 const d = document.createElement('div');
                 d.className = 'tree-node';
                 d.style.paddingLeft = (depth*20+8)+'px';
-                d.innerHTML = `<i class="fas fa-circle-nodes" style="color:${node.color||'#2d6bcb'}"></i><span class="label">${node.name}</span>`;
+                d.innerHTML = `<i class="fas fa-circle-nodes" style="color:${node.color||'#7aa9ff'}"></i><span class="label">${node.name}</span>`;
                 d.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (node.children && node.children.length > 0) {
@@ -606,7 +455,7 @@
                         renderMindMap();
                         renderTreeView();
                     } else {
-                        alert('Node has no children');
+                        alert('El nodo no tiene hijos');
                     }
                 });
                 container.appendChild(d);
@@ -618,20 +467,18 @@
             r(mindmap);
         }
 
-        // FIXED: draw lines using canvas-relative coordinates, accounting for scroll
+        // ----- dibujar líneas SVG (CORREGIDO PARA ZOOM)
         function drawLines() {
             const svg = document.getElementById('branchSvg');
-            if (!svg) return;
             svg.innerHTML = '';
-            
             const nodes = getAllNodes();
             const parentMap = new Map();
-            function traverse(p, node) { 
-                parentMap.set(node.id, p); 
-                node.children?.forEach(c => traverse(node, c)); 
-            }
+            function traverse(p, node) { parentMap.set(node.id, p); node.children?.forEach(c => traverse(node, c)); }
             traverse(null, mindmap);
 
+            // Obtener el factor de zoom del navegador (devicePixelRatio)
+            const zoom = window.devicePixelRatio || 1;
+            
             for (let node of nodes) {
                 if (collapsedNodes.has(node.id)) continue;
                 const parent = parentMap.get(node.id);
@@ -640,27 +487,32 @@
                 const childEl = nodeMap.get(node.id);
                 if (!parentEl || !childEl) continue;
 
-                // Get positions relative to the canvas
-                const parentLeft = parseFloat(parentEl.style.left) || 0;
-                const parentTop = parseFloat(parentEl.style.top) || 0;
-                const childLeft = parseFloat(childEl.style.left) || 0;
-                const childTop = parseFloat(childEl.style.top) || 0;
+                const canvas = document.getElementById('mindmapCanvas');
+                
+                // Obtener las posiciones relativas al viewport
+                const parentRect = parentEl.getBoundingClientRect();
+                const childRect = childEl.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
 
-                const parentWidth = parentEl.offsetWidth;
-                const parentHeight = parentEl.offsetHeight;
-                const childWidth = childEl.offsetWidth;
+                // Calcular posición relativa al canvas (en píxeles del viewport)
+                const parentCenterX = parentRect.left + parentRect.width / 2;
+                const parentBottomY = parentRect.bottom - 6;
+                const childCenterX = childRect.left + childRect.width / 2;
+                const childTopY = childRect.top + 6;
 
-                const x1 = parentLeft + parentWidth/2;
-                const y1 = parentTop + parentHeight;
-                const x2 = childLeft + childWidth/2;
-                const y2 = childTop;
+                // Convertir a coordenadas relativas al canvas, considerando scroll
+                const x1 = parentCenterX - canvasRect.left + canvas.scrollLeft;
+                const y1 = parentBottomY - canvasRect.top + canvas.scrollTop;
+                const x2 = childCenterX - canvasRect.left + canvas.scrollLeft;
+                const y2 = childTopY - canvasRect.top + canvas.scrollTop;
 
+                // Crear línea SVG
                 const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                 line.setAttribute("x1", x1);
                 line.setAttribute("y1", y1);
                 line.setAttribute("x2", x2);
                 line.setAttribute("y2", y2);
-                line.setAttribute("stroke", node.color || "#94a9c9");
+                line.setAttribute("stroke", node.color || "#5a7aac");
                 line.setAttribute("stroke-width", 2.5);
                 line.setAttribute("stroke-dasharray", "5,3");
                 line.setAttribute("class", "branch-line");
@@ -668,30 +520,17 @@
             }
         }
 
-        function applyZoom() {
-            const canvas = document.getElementById('mindmapCanvas');
-            canvas.style.transform = `scale(${currentScale})`;
-            document.getElementById('zoomLevel').innerText = Math.round(currentScale * 100) + '%';
-            drawLines();
+        // ----- menú contextual
+        function showContextMenu(e, nodeId) {
+            e.preventDefault();
+            currentNodeForContext = nodeId;
+            const menu = document.getElementById('contextMenu');
+            menu.style.left = e.clientX + 'px';
+            menu.style.top = e.clientY + 'px';
+            menu.classList.add('show');
         }
 
-        function zoomIn() {
-            if (currentScale < MAX_SCALE) {
-                currentScale = Math.min(MAX_SCALE, currentScale + 0.2);
-                applyZoom();
-            }
-        }
-        function zoomOut() {
-            if (currentScale > MIN_SCALE) {
-                currentScale = Math.max(MIN_SCALE, currentScale - 0.2);
-                applyZoom();
-            }
-        }
-        function zoomReset() {
-            currentScale = 1.0;
-            applyZoom();
-        }
-
+        // ----- renderizar nodos
         function renderMindMap() {
             const canvas = document.getElementById('mindmapCanvas');
             Array.from(canvas.children).forEach(el => { if (el.id !== 'branchSvg') el.remove(); });
@@ -705,8 +544,14 @@
                 card.style.left = node.x + 'px';
                 card.style.top = node.y + 'px';
                 card.style.borderLeftColor = node.color || '#2d6bcb';
-                card.style.backgroundColor = node.color ? (darkMode ? node.color+'40' : node.color+'20') : (darkMode ? '#2a2f3c' : 'rgba(255,255,255,0.95)');
+                card.style.backgroundColor = node.color ? node.color+'20' : 'rgba(30, 45, 68, 0.95)';
                 card.innerHTML = `<div>${node.name}</div><div class="drag-handle"><i class="fas fa-grip-lines"></i></div>`;
+
+                card.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showContextMenu(e, node.id);
+                });
 
                 card.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
@@ -753,7 +598,6 @@
                                 node.x = relativeX;
                                 node.y = relativeY;
                             }
-
                             drawLines();
                         },
                         end (event) {
@@ -768,7 +612,6 @@
             }
 
             addNode(mindmap);
-            applyZoom();
             drawLines();
         }
 
@@ -777,28 +620,34 @@
             renderMindMap();
         }
 
-        // button handlers (all working)
-        document.getElementById('addRootBtn').addEventListener('click', ()=>{
-            const newName = prompt('New root name:');
-            if (!newName) return;
-            const oldRoot = mindmap;
-            mindmap = { 
-                id: generateId(), 
-                name: newName, 
-                color: '#3b6bb0', 
-                x: 600, y: 150, 
-                children: [oldRoot] 
-            };
-            collapsedNodes.clear();
-            refresh();
+        // ----- acciones del menú contextual
+        document.getElementById('ctxEdit').addEventListener('click', ()=>{
+            if (!currentNodeForContext) return;
+            const node = findNodeById(mindmap, currentNodeForContext);
+            if (!node) return;
+            currentNodeToEdit = node.id;
+            document.getElementById('editNodeId').innerText = node.id;
+            document.getElementById('editNodeName').value = node.name;
+            document.getElementById('editModal').classList.add('show');
+            document.getElementById('contextMenu').classList.remove('show');
         });
 
-        document.getElementById('addChildBtn').addEventListener('click', ()=>{
-            let targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):');
-            if (!targetId) targetId = mindmap.id;
-            const node = findNodeById(mindmap, targetId);
-            if (!node) { alert('Node not found'); return; }
-            const newName = prompt('Enter child name:');
+        document.getElementById('ctxColor').addEventListener('click', ()=>{
+            if (!currentNodeForContext) return;
+            const node = findNodeById(mindmap, currentNodeForContext);
+            if (!node) return;
+            currentNodeToColor = node.id;
+            document.getElementById('colorNodeId').innerText = node.id;
+            document.getElementById('nodeColorModalPicker').value = node.color || '#2d6bcb';
+            document.getElementById('colorModal').classList.add('show');
+            document.getElementById('contextMenu').classList.remove('show');
+        });
+
+        document.getElementById('ctxAddChild').addEventListener('click', ()=>{
+            if (!currentNodeForContext) return;
+            const node = findNodeById(mindmap, currentNodeForContext);
+            if (!node) return;
+            const newName = prompt('Nombre del nuevo hijo:');
             if (!newName) return;
             const newX = node.x + 120;
             const newY = node.y + 100;
@@ -811,13 +660,58 @@
                 children: [] 
             });
             refresh();
+            document.getElementById('contextMenu').classList.remove('show');
+        });
+
+        document.getElementById('ctxCollapse').addEventListener('click', ()=>{
+            if (!currentNodeForContext) return;
+            const node = findNodeById(mindmap, currentNodeForContext);
+            if (!node || !node.children || node.children.length === 0) {
+                alert('No tiene hijos para colapsar');
+                return;
+            }
+            if (collapsedNodes.has(node.id)) collapsedNodes.delete(node.id);
+            else collapsedNodes.add(node.id);
+            refresh();
+            document.getElementById('contextMenu').classList.remove('show');
+        });
+
+        // ocultar menú contextual
+        window.addEventListener('click', (e) => {
+            document.getElementById('contextMenu').classList.remove('show');
+        });
+        window.addEventListener('contextmenu', (e) => {
+            if (!e.target.closest('.node-card')) {
+                document.getElementById('contextMenu').classList.remove('show');
+            }
+        });
+
+        // ----- botones toolbar
+        document.getElementById('addRootBtn').addEventListener('click', ()=>{
+            const newName = prompt('Nombre de la nueva raíz:');
+            if (!newName) return;
+            const oldRoot = mindmap;
+            mindmap = { id: generateId(), name: newName, color: '#3b6bb0', x: 600, y: 150, children: [oldRoot] };
+            collapsedNodes.clear();
+            refresh();
+        });
+
+        document.getElementById('addChildBtn').addEventListener('click', ()=>{
+            let targetId = prompt('ID del nodo padre (raíz: ' + mindmap.id + '):') || mindmap.id;
+            const node = findNodeById(mindmap, targetId);
+            if (!node) { alert('Nodo no encontrado'); return; }
+            const newName = prompt('Nombre del hijo:');
+            if (!newName) return;
+            const newX = node.x + 120;
+            const newY = node.y + 100;
+            node.children.push({ id: generateId(), name: newName, color: '#7f8c8d', x: newX, y: newY, children: [] });
+            refresh();
         });
 
         document.getElementById('editNodeBtn').addEventListener('click', ()=>{
-            let id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):');
-            if (!id) id = mindmap.id;
+            let id = prompt('ID del nodo a editar (raíz: ' + mindmap.id + '):') || mindmap.id;
             const node = findNodeById(mindmap, id);
-            if (!node) { alert('Node not found'); return; }
+            if (!node) { alert('Nodo no encontrado'); return; }
             currentNodeToEdit = id;
             document.getElementById('editNodeId').innerText = id;
             document.getElementById('editNodeName').value = node.name;
@@ -825,10 +719,9 @@
         });
 
         document.getElementById('applyColorBtn').addEventListener('click', ()=>{
-            let id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):');
-            if (!id) id = mindmap.id;
+            let id = prompt('ID del nodo para cambiar color (raíz: ' + mindmap.id + '):') || mindmap.id;
             const node = findNodeById(mindmap, id);
-            if (!node) { alert('Node not found'); return; }
+            if (!node) { alert('Nodo no encontrado'); return; }
             currentNodeToColor = id;
             document.getElementById('colorNodeId').innerText = id;
             document.getElementById('nodeColorModalPicker').value = node.color || '#2d6bcb';
@@ -849,36 +742,15 @@
         });
 
         document.getElementById('collapseToggleBtn').addEventListener('click', ()=>{
-            let id = prompt('Enter node ID to collapse/expand:');
+            let id = prompt('ID del nodo para colapsar/expandir:');
             if (!id) return;
             const node = findNodeById(mindmap, id);
-            if (!node || !node.children || node.children.length === 0) {
-                alert('Node has no children');
-                return;
-            }
-            if (collapsedNodes.has(id)) collapsedNodes.delete(id);
-            else collapsedNodes.add(id);
+            if (!node || !node.children || node.children.length === 0) { alert('El nodo no tiene hijos'); return; }
+            if (collapsedNodes.has(id)) collapsedNodes.delete(id); else collapsedNodes.add(id);
             refresh();
         });
 
-        document.getElementById('fullscreenBtn').addEventListener('click', ()=>{
-            const container = document.getElementById('appContainer');
-            container.classList.toggle('fullscreen');
-            const btn = document.getElementById('fullscreenBtn');
-            if (container.classList.contains('fullscreen')) {
-                btn.innerHTML = '<i class="fas fa-compress"></i> Exit';
-            } else {
-                btn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
-            }
-            setTimeout(() => drawLines(), 100);
-        });
-
-        // zoom controls
-        document.getElementById('zoomIn').addEventListener('click', zoomIn);
-        document.getElementById('zoomOut').addEventListener('click', zoomOut);
-        document.getElementById('zoomReset').addEventListener('click', zoomReset);
-
-        // export / share
+        // ----- exportar
         document.getElementById('exportBtn').addEventListener('click', ()=>{
             const dataStr = JSON.stringify(mindmap, null, 2);
             const blob = new Blob([dataStr], {type:'application/json'});
@@ -888,18 +760,70 @@
             URL.revokeObjectURL(url);
         });
 
+        // ----- cargar mapa
+        document.getElementById('loadBtn').addEventListener('click', ()=>{
+            document.getElementById('loadData').value = '';
+            document.getElementById('loadFileInput').value = '';
+            document.getElementById('loadModal').classList.add('show');
+        });
+
+        document.getElementById('cancelLoad').addEventListener('click', ()=>{
+            document.getElementById('loadModal').classList.remove('show');
+        });
+
+        document.getElementById('confirmLoad').addEventListener('click', ()=>{
+            const jsonText = document.getElementById('loadData').value.trim();
+            if (jsonText) {
+                try {
+                    const imported = JSON.parse(jsonText);
+                    if (!isValidMindMap(imported)) throw new Error('Estructura inválida');
+                    mindmap = imported;
+                    collapsedNodes.clear();
+                    refresh();
+                    document.getElementById('loadModal').classList.remove('show');
+                } catch (e) {
+                    alert('JSON inválido: ' + e.message);
+                }
+                return;
+            }
+
+            const file = document.getElementById('loadFileInput').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        if (!isValidMindMap(imported)) throw new Error('Estructura inválida');
+                        mindmap = imported;
+                        collapsedNodes.clear();
+                        refresh();
+                        document.getElementById('loadModal').classList.remove('show');
+                    } catch (ex) {
+                        alert('Error al leer archivo: ' + ex.message);
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                alert('Pega un JSON o selecciona un archivo');
+            }
+        });
+
+        // compartir
         document.getElementById('shareBtn').addEventListener('click', ()=>{
             document.getElementById('shareData').value = JSON.stringify(mindmap, null, 2);
             document.getElementById('shareModal').classList.add('show');
         });
-
-        // modal buttons
-        document.getElementById('cancelEdit').addEventListener('click', ()=> {
-            document.getElementById('editModal').classList.remove('show');
+        document.getElementById('closeShareBtn').addEventListener('click', ()=> document.getElementById('shareModal').classList.remove('show'));
+        document.getElementById('copyShareBtn').addEventListener('click', ()=>{
+            navigator.clipboard.writeText(JSON.stringify(mindmap, null, 2));
+            alert('¡Copiado!');
         });
+
+        // modales
+        document.getElementById('cancelEdit').addEventListener('click', ()=> document.getElementById('editModal').classList.remove('show'));
         document.getElementById('saveEdit').addEventListener('click', ()=>{
             const newName = document.getElementById('editNodeName').value.trim();
-            if (!newName) { alert('Name cannot be empty'); return; }
+            if (!newName) { alert('El nombre no puede estar vacío'); return; }
             if (currentNodeToEdit) {
                 const node = findNodeById(mindmap, currentNodeToEdit);
                 if (node) node.name = newName;
@@ -908,9 +832,7 @@
             refresh();
         });
 
-        document.getElementById('cancelColor').addEventListener('click', ()=> {
-            document.getElementById('colorModal').classList.remove('show');
-        });
+        document.getElementById('cancelColor').addEventListener('click', ()=> document.getElementById('colorModal').classList.remove('show'));
         document.getElementById('applyColorModal').addEventListener('click', ()=>{
             const newColor = document.getElementById('nodeColorModalPicker').value;
             if (currentNodeToColor) {
@@ -921,30 +843,33 @@
             refresh();
         });
 
-        document.getElementById('closeShareBtn').addEventListener('click', ()=> {
-            document.getElementById('shareModal').classList.remove('show');
-        });
-        document.getElementById('copyShareBtn').addEventListener('click', ()=>{
-            navigator.clipboard.writeText(JSON.stringify(mindmap, null, 2));
-            alert('Copied!');
-        });
-
-        // close modals on overlay click
-        ['editModal','colorModal','shareModal'].forEach(id => {
+        // cerrar modales al hacer clic fuera
+        ['editModal','colorModal','shareModal','loadModal'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal-overlay')) {
-                    document.getElementById(id).classList.remove('show');
-                }
+                if (e.target.classList.contains('modal-overlay')) document.getElementById(id).classList.remove('show');
             });
         });
 
-        // redraw lines on scroll
-        const viewport = document.getElementById('viewport');
-        viewport.addEventListener('scroll', ()=> drawLines());
-        window.addEventListener('resize', ()=> drawLines());
-
-        // initial render
+        // render inicial
         refresh();
+
+        // ACTUALIZACIÓN MEJORADA: líneas se redibujan con cada evento relevante
+        const canvas = document.getElementById('mindmapCanvas');
+        canvas.addEventListener('scroll', ()=> drawLines());
+        window.addEventListener('resize', ()=> drawLines());
+        window.addEventListener('scroll', ()=> drawLines()); // por si acaso
+        
+        // Observador para detectar cambios en el zoom (devicePixelRatio)
+        let lastZoom = window.devicePixelRatio;
+        setInterval(() => {
+            if (window.devicePixelRatio !== lastZoom) {
+                lastZoom = window.devicePixelRatio;
+                drawLines();
+            }
+        }, 200);
+
+        // También redibujar periódicamente para asegurar sincronía
+        setInterval(() => drawLines(), 150);
     })();
 </script>
 </body>
