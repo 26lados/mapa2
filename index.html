@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>flux · branches stay forever</title>
+    <title>flux · perfect zoom & pan</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -230,7 +230,7 @@
         .tree-node i { color: #2d6bcb; width: 20px; }
         .tree-node .label { flex:1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* main canvas */
+        /* main canvas - completely redesigned zoom/pan */
         .mindmap-area {
             flex: 1;
             background: rgba(255,255,255,0.25);
@@ -246,16 +246,21 @@
         #viewport {
             width: 100%;
             height: 100%;
-            overflow: auto;
+            overflow: hidden;
             position: relative;
-            cursor: default;
+            cursor: grab;
+        }
+
+        #viewport.panning {
+            cursor: grabbing;
         }
 
         #mindmapCanvas {
-            position: relative;
+            position: absolute;
             transform-origin: 0 0;
             width: 3000px;
             height: 2000px;
+            will-change: transform;
         }
 
         /* node cards */
@@ -305,7 +310,7 @@
             color: #6a7a9a;
         }
 
-        /* FIXED: branch lines now stay with the map */
+        /* branch lines - now using canvas coordinates */
         .branch-layer {
             position: absolute;
             top: 0;
@@ -314,7 +319,6 @@
             height: 100%;
             pointer-events: none;
             z-index: 50;
-            transform: scale(1); /* don't scale with parent */
         }
 
         .branch-line {
@@ -322,7 +326,7 @@
             stroke-width: 2.5;
             stroke-dasharray: 5,3;
             filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
-            vector-effect: non-scaling-stroke; /* CRITICAL: keeps stroke width constant */
+            vector-effect: non-scaling-stroke;
         }
 
         .dark-mode .branch-line {
@@ -535,9 +539,18 @@
         let collapsedNodes = new Set();
         let nodeMap = new Map();
         let dragOffsets = new Map();
+        
+        // Zoom and pan state
         let currentScale = 1.0;
+        let panX = 0;
+        let panY = 0;
         const MIN_SCALE = 0.2;
         const MAX_SCALE = 3.0;
+        
+        // Panning state
+        let isPanning = false;
+        let startPanX = 0;
+        let startPanY = 0;
 
         let currentNodeToEdit = null;
         let currentNodeToColor = null;
@@ -606,7 +619,7 @@
             r(mindmap);
         }
 
-        // FIXED: lines now use canvas coordinates and vector-effect keeps them visible
+        // Draw lines using canvas coordinates - works at ANY zoom level
         function drawLines() {
             const svg = document.getElementById('branchSvg');
             if (!svg) return;
@@ -621,7 +634,7 @@
             traverse(null, mindmap);
 
             // Set SVG viewBox to match canvas size
-            svg.setAttribute('viewBox', `0 0 3000 2000`);
+            svg.setAttribute('viewBox', '0 0 3000 2000');
             svg.setAttribute('preserveAspectRatio', 'none');
 
             for (let node of nodes) {
@@ -658,35 +671,96 @@
                     line.setAttribute("stroke", node.color || "#94a9c9");
                     line.setAttribute("stroke-width", "2.5");
                     line.setAttribute("stroke-dasharray", "5,3");
-                    line.setAttribute("vector-effect", "non-scaling-stroke"); // KEY FIX
+                    line.setAttribute("vector-effect", "non-scaling-stroke");
                     line.setAttribute("class", "branch-line");
                     svg.appendChild(line);
                 }
             }
         }
 
-        function applyZoom() {
+        // Apply both zoom and pan transforms
+        function applyTransform() {
             const canvas = document.getElementById('mindmapCanvas');
-            canvas.style.transform = `scale(${currentScale})`;
+            canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
             document.getElementById('zoomLevel').innerText = Math.round(currentScale * 100) + '%';
-            // No need to redraw lines - they stay with vector-effect
+            drawLines(); // Redraw lines with new transform
         }
 
         function zoomIn() {
             if (currentScale < MAX_SCALE) {
-                currentScale = Math.min(MAX_SCALE, currentScale + 0.2);
-                applyZoom();
+                // Zoom toward center of viewport
+                const viewport = document.getElementById('viewport');
+                const rect = viewport.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                // Adjust pan to zoom toward center
+                const scaleChange = 0.2;
+                const newScale = Math.min(MAX_SCALE, currentScale + scaleChange);
+                
+                // Calculate new pan to keep center point stable
+                panX = panX - (centerX / currentScale) * (scaleChange / (currentScale + scaleChange));
+                panY = panY - (centerY / currentScale) * (scaleChange / (currentScale + scaleChange));
+                
+                currentScale = newScale;
+                applyTransform();
             }
         }
+
         function zoomOut() {
             if (currentScale > MIN_SCALE) {
-                currentScale = Math.max(MIN_SCALE, currentScale - 0.2);
-                applyZoom();
+                const viewport = document.getElementById('viewport');
+                const rect = viewport.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const scaleChange = 0.2;
+                const newScale = Math.max(MIN_SCALE, currentScale - scaleChange);
+                
+                panX = panX + (centerX / newScale) * (scaleChange / currentScale);
+                panY = panY + (centerY / newScale) * (scaleChange / currentScale);
+                
+                currentScale = newScale;
+                applyTransform();
             }
         }
+
         function zoomReset() {
             currentScale = 1.0;
-            applyZoom();
+            panX = 0;
+            panY = 0;
+            applyTransform();
+        }
+
+        // Pan with mouse drag
+        function setupPanning() {
+            const viewport = document.getElementById('viewport');
+            
+            viewport.addEventListener('mousedown', (e) => {
+                // Only pan when not dragging a node (check if target is viewport or background)
+                if (e.target === viewport || e.target.id === 'mindmapCanvas' || e.target.tagName === 'svg') {
+                    isPanning = true;
+                    startPanX = e.clientX - panX;
+                    startPanY = e.clientY - panY;
+                    viewport.classList.add('panning');
+                    viewport.style.cursor = 'grabbing';
+                }
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isPanning) return;
+                
+                panX = e.clientX - startPanX;
+                panY = e.clientY - startPanY;
+                
+                applyTransform();
+            });
+
+            window.addEventListener('mouseup', () => {
+                isPanning = false;
+                viewport.classList.remove('panning');
+                viewport.style.cursor = 'grab';
+            });
         }
 
         function renderMindMap() {
@@ -734,21 +808,18 @@
                             const offset = dragOffsets.get(target.id);
                             if (!offset) return;
 
-                            const x = event.clientX - offset.x;
-                            const y = event.clientY - offset.y;
+                            // Account for current pan and zoom
+                            const x = (event.clientX - offset.x - panX) / currentScale;
+                            const y = (event.clientY - offset.y - panY) / currentScale;
 
-                            const canvasRect = canvas.getBoundingClientRect();
-                            const relativeX = x - canvasRect.left + canvas.scrollLeft;
-                            const relativeY = y - canvasRect.top + canvas.scrollTop;
-
-                            target.style.left = relativeX + 'px';
-                            target.style.top = relativeY + 'px';
+                            target.style.left = x + 'px';
+                            target.style.top = y + 'px';
 
                             const nodeId = target.getAttribute('data-id');
                             const node = findNodeById(mindmap, nodeId);
                             if (node) {
-                                node.x = relativeX;
-                                node.y = relativeY;
+                                node.x = x;
+                                node.y = y;
                             }
 
                             drawLines();
@@ -765,7 +836,7 @@
             }
 
             addNode(mindmap);
-            applyZoom();
+            applyTransform();
             drawLines();
         }
 
@@ -773,6 +844,9 @@
             renderTreeView();
             renderMindMap();
         }
+
+        // Initialize panning
+        setupPanning();
 
         // button handlers
         document.getElementById('addRootBtn').addEventListener('click', ()=>{
@@ -930,10 +1004,6 @@
                 }
             });
         });
-
-        const viewport = document.getElementById('viewport');
-        viewport.addEventListener('scroll', ()=> drawLines());
-        window.addEventListener('resize', ()=> drawLines());
 
         refresh();
     })();
