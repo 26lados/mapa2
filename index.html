@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>flux · draggable mindmap</title>
+    <title>flux · fixed drag & edit</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -187,11 +187,12 @@
             text-align: center;
             cursor: grab;
             user-select: none;
-            transition: box-shadow 0.1s, border-color 0.1s;
+            transition: box-shadow 0.1s;
             font-weight: 500;
             color: #11223b;
             will-change: transform;
-            touch-action: none; /* for drag */
+            touch-action: none;
+            z-index: 100;
         }
 
         .node-card:active {
@@ -217,6 +218,7 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
+            z-index: 50;
         }
 
         .branch-layer svg {
@@ -227,7 +229,7 @@
         .branch-line {
             stroke: #94a9c9;
             stroke-width: 2.5;
-            stroke-dasharray: none;
+            stroke-dasharray: 5,3;
             filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
         }
 
@@ -307,7 +309,7 @@
         <div class="mindmap-area" id="mindmapArea">
             <div id="mindmapCanvas">
                 <svg class="branch-layer" id="branchSvg"></svg>
-                <!-- nodes will be injected here as absolute divs -->
+                <!-- nodes will be injected here -->
             </div>
         </div>
     </div>
@@ -337,21 +339,30 @@
         };
 
         let collapsedNodes = new Set(); // no collapse by default
-        let nodeMap = new Map(); // id -> DOM element (for lines)
-        let dragOffsets = new Map(); // store per-node drag offset
+        let nodeMap = new Map(); // id -> DOM element
+        let dragOffsets = new Map();
+
+        // global variables for modal targets
+        let currentNodeToEdit = null;
+        let currentNodeToColor = null;
 
         // ----- helpers
         function generateId() { return 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2,6); }
 
         function findNodeById(node, id) {
             if (node.id === id) return node;
-            if (node.children) for (let c of node.children) { let f = findNodeById(c, id); if (f) return f; }
+            if (node.children) {
+                for (let c of node.children) {
+                    let found = findNodeById(c, id);
+                    if (found) return found;
+                }
+            }
             return null;
         }
 
         function getAllNodes() { let arr=[]; function t(n){ arr.push(n); n.children?.forEach(t); } t(mindmap); return arr; }
 
-        // ----- render tree view (left)
+        // ----- render tree view (left) - click to collapse/expand
         function renderTreeView() {
             const container = document.getElementById('treeView');
             function r(node, depth=0) {
@@ -359,45 +370,52 @@
                 d.className = 'tree-node';
                 d.style.paddingLeft = (depth*20+8)+'px';
                 d.innerHTML = `<i class="fas fa-circle-nodes" style="color:${node.color||'#2d6bcb'}"></i><span class="label">${node.name}</span>`;
-                d.addEventListener('click', ()=> {
-                    let id = prompt('Enter node ID to collapse/expand (or leave empty to toggle this)', node.id);
-                    if (!id) id = node.id;
-                    const n = findNodeById(mindmap, id);
-                    if (n && n.children?.length) {
-                        if (collapsedNodes.has(id)) collapsedNodes.delete(id); else collapsedNodes.add(id);
-                        renderMindMap(); renderTreeView();
-                    } else alert('Node has no children or not found');
+                d.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (node.children && node.children.length > 0) {
+                        if (collapsedNodes.has(node.id)) collapsedNodes.delete(node.id);
+                        else collapsedNodes.add(node.id);
+                        renderMindMap();
+                        renderTreeView();
+                    } else {
+                        alert('Node has no children');
+                    }
                 });
                 container.appendChild(d);
-                if (!collapsedNodes.has(node.id) && node.children) node.children.forEach(c => r(c, depth+1));
+                if (!collapsedNodes.has(node.id) && node.children) {
+                    node.children.forEach(c => r(c, depth+1));
+                }
             }
             container.innerHTML = '';
             r(mindmap);
         }
 
-        // ----- draw svg lines between parent and children (if not collapsed)
+        // ----- draw svg lines between parent and children
         function drawLines() {
             const svg = document.getElementById('branchSvg');
             svg.innerHTML = '';
             const nodes = getAllNodes();
             const parentMap = new Map();
-            function traverse(p, node) { parentMap.set(node.id, p); node.children?.forEach(c => traverse(node, c)); }
+            function traverse(p, node) { 
+                parentMap.set(node.id, p); 
+                node.children?.forEach(c => traverse(node, c)); 
+            }
             traverse(null, mindmap);
 
             for (let node of nodes) {
-                if (collapsedNodes.has(node.id) || !parentMap.get(node.id)) continue;
+                if (collapsedNodes.has(node.id)) continue;
                 const parent = parentMap.get(node.id);
                 if (!parent) continue;
                 const parentEl = nodeMap.get(parent.id);
                 const childEl = nodeMap.get(node.id);
                 if (!parentEl || !childEl) continue;
 
-                const parentRect = parentEl.getBoundingClientRect();
-                const childRect = childEl.getBoundingClientRect();
                 const canvas = document.getElementById('mindmapCanvas');
                 const canvasRect = canvas.getBoundingClientRect();
 
-                // convert to canvas relative coordinates
+                const parentRect = parentEl.getBoundingClientRect();
+                const childRect = childEl.getBoundingClientRect();
+
                 const x1 = parentRect.left + parentRect.width/2 - canvasRect.left + canvas.scrollLeft;
                 const y1 = parentRect.top + parentRect.height - canvasRect.top + canvas.scrollTop - 6;
                 const x2 = childRect.left + childRect.width/2 - canvasRect.left + canvas.scrollLeft;
@@ -416,7 +434,7 @@
             }
         }
 
-        // ----- render draggable nodes with interact.js
+        // ----- render draggable nodes
         function renderMindMap() {
             const canvas = document.getElementById('mindmapCanvas');
             // remove all nodes except svg layer
@@ -424,8 +442,8 @@
             nodeMap.clear();
 
             function addNode(node) {
-                if (collapsedNodes.has(node.id) && node !== mindmap) return; // hide collapsed branches (but root always visible)
-
+                // if collapsed and not root, skip children but we still add the node itself
+                // we always add the node, but if it's collapsed we don't add its children
                 const card = document.createElement('div');
                 card.className = 'node-card';
                 card.id = 'node-' + node.id;
@@ -448,15 +466,16 @@
                 canvas.appendChild(card);
                 nodeMap.set(node.id, card);
 
-                // enable drag with interact
+                // enable drag with interact - FIXED: properly detach from clicks
                 interact(card).draggable({
                     inertia: false,
                     modifiers: [],
                     autoScroll: false,
                     listeners: {
                         start (event) {
-                            const rect = event.target.getBoundingClientRect();
-                            dragOffsets.set(event.target.id, {
+                            const target = event.target;
+                            const rect = target.getBoundingClientRect();
+                            dragOffsets.set(target.id, {
                                 x: event.clientX - rect.left,
                                 y: event.clientY - rect.top
                             });
@@ -484,7 +503,7 @@
                                 node.y = relativeY;
                             }
 
-                            drawLines(); // realtime line update
+                            drawLines();
                         },
                         end (event) {
                             dragOffsets.delete(event.target.id);
@@ -508,33 +527,54 @@
             renderMindMap();
         }
 
-        // ----- actions
+        // ----- FIXED BUTTON HANDLERS -----
         document.getElementById('addRootBtn').addEventListener('click', ()=>{
             const newName = prompt('New root name:');
             if (!newName) return;
             const oldRoot = mindmap;
-            mindmap = { id: generateId(), name: newName, color: '#3b6bb0', x: 600, y: 150, children: [oldRoot] };
+            mindmap = { 
+                id: generateId(), 
+                name: newName, 
+                color: '#3b6bb0', 
+                x: 600, y: 150, 
+                children: [oldRoot] 
+            };
             collapsedNodes.clear();
             refresh();
         });
 
         document.getElementById('addChildBtn').addEventListener('click', ()=>{
-            let targetId = prompt('Target node ID (root: '+mindmap.id+'):') || mindmap.id;
+            let targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):');
+            if (!targetId) targetId = mindmap.id;
             const node = findNodeById(mindmap, targetId);
-            if (!node) return alert('Node not found');
-            const newName = prompt('Child name:','new');
+            if (!node) {
+                alert('Node not found');
+                return;
+            }
+            const newName = prompt('Enter child name:');
             if (!newName) return;
+            // position slightly offset from parent
             const newX = node.x + 120;
             const newY = node.y + 100;
-            node.children.push({ id: generateId(), name: newName, color: '#7f8c8d', x: newX, y: newY, children: [] });
+            node.children.push({ 
+                id: generateId(), 
+                name: newName, 
+                color: '#7f8c8d', 
+                x: newX, 
+                y: newY, 
+                children: [] 
+            });
             refresh();
         });
 
         document.getElementById('editNodeBtn').addEventListener('click', ()=>{
-            let id = prompt('Node ID to edit:', mindmap.id);
-            if (!id) return;
+            let id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):');
+            if (!id) id = mindmap.id;
             const node = findNodeById(mindmap, id);
-            if (!node) return alert('not found');
+            if (!node) {
+                alert('Node not found');
+                return;
+            }
             currentNodeToEdit = id;
             document.getElementById('editNodeId').innerText = id;
             document.getElementById('editNodeName').value = node.name;
@@ -542,10 +582,13 @@
         });
 
         document.getElementById('applyColorBtn').addEventListener('click', ()=>{
-            let id = prompt('Node ID to change color:', mindmap.id);
-            if (!id) return;
+            let id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):');
+            if (!id) id = mindmap.id;
             const node = findNodeById(mindmap, id);
-            if (!node) return alert('not found');
+            if (!node) {
+                alert('Node not found');
+                return;
+            }
             currentNodeToColor = id;
             document.getElementById('colorNodeId').innerText = id;
             document.getElementById('nodeColorModalPicker').value = node.color || '#2d6bcb';
@@ -554,12 +597,12 @@
 
         document.getElementById('resetLayoutBtn').addEventListener('click', ()=>{
             // simple tree layout
-            let yStart = 150;
-            function layout(node, x, y) {
-                node.x = x; node.y = y;
+            function layout(node, x, y, xOffset = 180, yOffset = 120) {
+                node.x = x;
+                node.y = y;
                 if (node.children) {
                     node.children.forEach((child, i) => {
-                        layout(child, x + 180 + i*40, y + 120);
+                        layout(child, x + xOffset + i*30, y + yOffset, xOffset * 0.8, yOffset);
                     });
                 }
             }
@@ -568,11 +611,15 @@
         });
 
         document.getElementById('collapseToggleBtn').addEventListener('click', ()=>{
-            let id = prompt('Node ID to collapse/expand:');
+            let id = prompt('Enter node ID to collapse/expand:');
             if (!id) return;
             const node = findNodeById(mindmap, id);
-            if (!node || !node.children?.length) return alert('no children');
-            if (collapsedNodes.has(id)) collapsedNodes.delete(id); else collapsedNodes.add(id);
+            if (!node || !node.children || node.children.length === 0) {
+                alert('Node has no children');
+                return;
+            }
+            if (collapsedNodes.has(id)) collapsedNodes.delete(id);
+            else collapsedNodes.add(id);
             refresh();
         });
 
@@ -590,17 +637,14 @@
             document.getElementById('shareData').value = JSON.stringify(mindmap, null, 2);
             document.getElementById('shareModal').classList.add('show');
         });
-        document.getElementById('closeShareBtn').addEventListener('click', ()=> document.getElementById('shareModal').classList.remove('show'));
-        document.getElementById('copyShareBtn').addEventListener('click', ()=>{
-            navigator.clipboard.writeText(JSON.stringify(mindmap, null, 2));
-            alert('Copied!');
-        });
 
-        // modal handlers
-        document.getElementById('cancelEdit').addEventListener('click', ()=> document.getElementById('editModal').classList.remove('show'));
+        // modal buttons
+        document.getElementById('cancelEdit').addEventListener('click', ()=> {
+            document.getElementById('editModal').classList.remove('show');
+        });
         document.getElementById('saveEdit').addEventListener('click', ()=>{
             const newName = document.getElementById('editNodeName').value.trim();
-            if (!newName) return alert('name required');
+            if (!newName) { alert('Name cannot be empty'); return; }
             if (currentNodeToEdit) {
                 const node = findNodeById(mindmap, currentNodeToEdit);
                 if (node) node.name = newName;
@@ -608,7 +652,10 @@
             document.getElementById('editModal').classList.remove('show');
             refresh();
         });
-        document.getElementById('cancelColor').addEventListener('click', ()=> document.getElementById('colorModal').classList.remove('show'));
+
+        document.getElementById('cancelColor').addEventListener('click', ()=> {
+            document.getElementById('colorModal').classList.remove('show');
+        });
         document.getElementById('applyColorModal').addEventListener('click', ()=>{
             const newColor = document.getElementById('nodeColorModalPicker').value;
             if (currentNodeToColor) {
@@ -619,20 +666,32 @@
             refresh();
         });
 
+        document.getElementById('closeShareBtn').addEventListener('click', ()=> {
+            document.getElementById('shareModal').classList.remove('show');
+        });
+        document.getElementById('copyShareBtn').addEventListener('click', ()=>{
+            navigator.clipboard.writeText(JSON.stringify(mindmap, null, 2));
+            alert('Copied to clipboard!');
+        });
+
         // close modals on overlay click
         ['editModal','colorModal','shareModal'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal-overlay')) document.getElementById(id).classList.remove('show');
+                if (e.target.classList.contains('modal-overlay')) {
+                    document.getElementById(id).classList.remove('show');
+                }
             });
         });
 
-        // initial
+        // initial render
         refresh();
 
         // update lines on scroll/resize
-        window.addEventListener('scroll', ()=> drawLines(), true);
+        const canvas = document.getElementById('mindmapCanvas');
+        canvas.addEventListener('scroll', ()=> drawLines());
         window.addEventListener('resize', ()=> drawLines());
-        setInterval(() => drawLines(), 200); // fallback
+        // periodic redraw to catch any missed updates
+        setInterval(() => drawLines(), 300);
     })();
 </script>
 </body>
