@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>canv1</title>
+    <title>canv3</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -332,6 +332,68 @@
             color: #6a7a9a;
         }
 
+        /* Right-click context menu */
+        .context-menu {
+            position: fixed;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 8px 0;
+            min-width: 200px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.8);
+            z-index: 10000;
+            display: none;
+        }
+
+        .dark-mode .context-menu {
+            background: rgba(30, 35, 48, 0.95);
+            border-color: rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .context-menu.show {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 12px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #152b44;
+            transition: background 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .dark-mode .context-menu-item {
+            color: #e0e5f0;
+        }
+
+        .context-menu-item:hover {
+            background: rgba(45, 107, 203, 0.1);
+        }
+
+        .context-menu-item i {
+            width: 20px;
+            color: #2d6bcb;
+        }
+
+        .dark-mode .context-menu-item i {
+            color: #6d9eff;
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: rgba(0,0,0,0.1);
+            margin: 8px 0;
+        }
+
+        .dark-mode .context-menu-divider {
+            background: rgba(255,255,255,0.1);
+        }
+
         .color-picker-wrapper {
             display: flex;
             align-items: center;
@@ -512,6 +574,26 @@
     </div>
 </div>
 
+<!-- Right-click Context Menu -->
+<div class="context-menu" id="contextMenu">
+    <div class="context-menu-item" id="contextAddChild">
+        <i class="fas fa-plus-circle"></i> Add Child
+    </div>
+    <div class="context-menu-item" id="contextEdit">
+        <i class="fas fa-pen-fancy"></i> Edit Name
+    </div>
+    <div class="context-menu-item" id="contextColor">
+        <i class="fas fa-palette"></i> Change Color
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" id="contextCollapse">
+        <i class="fas fa-compress-alt"></i> Collapse/Expand
+    </div>
+    <div class="context-menu-item" id="contextDelete">
+        <i class="fas fa-trash"></i> Delete Node
+    </div>
+</div>
+
 <!-- modals -->
 <div class="modal-overlay" id="editModal">
     <div class="modal-card">
@@ -594,35 +676,183 @@
         // Modal targets
         let currentNodeToEdit = null;
         let currentNodeToColor = null;
+        let currentNodeToDelete = null;
 
         // Theme
         let darkMode = localStorage.getItem('canvas-dark') === 'true';
 
-        // ==================== DISABLE RIGHT CLICK ====================
-        // Prevent context menu on the entire mindmap area
-        const disableContextMenu = () => {
-            const mindmapArea = document.getElementById('mindmapArea');
-            if (mindmapArea) {
-                mindmapArea.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    return false;
-                });
-            }
-            
-            const viewport = document.getElementById('viewport');
-            if (viewport) {
-                viewport.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    return false;
-                });
-            }
-            
+        // ==================== CONTEXT MENU ====================
+        const contextMenu = document.getElementById('contextMenu');
+        let activeNodeId = null;
+
+        // Show context menu on right-click
+        const setupContextMenu = () => {
             const canvas = document.getElementById('mindmapCanvas');
-            if (canvas) {
-                canvas.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    return false;
-                });
+            
+            canvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                
+                // Find if we clicked on a node
+                const nodeCard = e.target.closest('.node-card');
+                
+                if (nodeCard) {
+                    activeNodeId = nodeCard.getAttribute('data-id');
+                    
+                    // Position menu at mouse
+                    contextMenu.style.left = e.clientX + 'px';
+                    contextMenu.style.top = e.clientY + 'px';
+                    contextMenu.classList.add('show');
+                } else {
+                    // Clicked on background - hide menu
+                    contextMenu.classList.remove('show');
+                    activeNodeId = null;
+                }
+            });
+
+            // Hide menu on click elsewhere
+            document.addEventListener('click', (e) => {
+                if (!contextMenu.contains(e.target)) {
+                    contextMenu.classList.remove('show');
+                }
+            });
+
+            // Hide on escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    contextMenu.classList.remove('show');
+                }
+            });
+
+            // Context menu actions
+            document.getElementById('contextAddChild').addEventListener('click', () => {
+                if (activeNodeId) {
+                    addChildToNode(activeNodeId);
+                    contextMenu.classList.remove('show');
+                }
+            });
+
+            document.getElementById('contextEdit').addEventListener('click', () => {
+                if (activeNodeId) {
+                    editNodeById(activeNodeId);
+                    contextMenu.classList.remove('show');
+                }
+            });
+
+            document.getElementById('contextColor').addEventListener('click', () => {
+                if (activeNodeId) {
+                    changeNodeColor(activeNodeId);
+                    contextMenu.classList.remove('show');
+                }
+            });
+
+            document.getElementById('contextCollapse').addEventListener('click', () => {
+                if (activeNodeId) {
+                    toggleCollapseNode(activeNodeId);
+                    contextMenu.classList.remove('show');
+                }
+            });
+
+            document.getElementById('contextDelete').addEventListener('click', () => {
+                if (activeNodeId) {
+                    deleteNode(activeNodeId);
+                    contextMenu.classList.remove('show');
+                }
+            });
+        };
+
+        // ==================== NODE OPERATIONS ====================
+        const addChildToNode = (nodeId) => {
+            const node = findNodeById(mindmap, nodeId);
+            if (!node) return;
+            
+            const newName = prompt('Enter child name:');
+            if (!newName) return;
+            
+            const newX = node.x + 120;
+            const newY = node.y + 100;
+            
+            node.children.push({
+                id: generateId(),
+                name: newName,
+                color: '#7f8c8d',
+                x: newX,
+                y: newY,
+                children: []
+            });
+            
+            refresh();
+        };
+
+        const editNodeById = (nodeId) => {
+            const node = findNodeById(mindmap, nodeId);
+            if (!node) return;
+            
+            currentNodeToEdit = nodeId;
+            document.getElementById('editNodeId').innerText = nodeId;
+            document.getElementById('editNodeName').value = node.name;
+            document.getElementById('editModal').classList.add('show');
+        };
+
+        const changeNodeColor = (nodeId) => {
+            const node = findNodeById(mindmap, nodeId);
+            if (!node) return;
+            
+            currentNodeToColor = nodeId;
+            document.getElementById('colorNodeId').innerText = nodeId;
+            document.getElementById('nodeColorModalPicker').value = node.color || '#2d6bcb';
+            document.getElementById('colorModal').classList.add('show');
+        };
+
+        const toggleCollapseNode = (nodeId) => {
+            const node = findNodeById(mindmap, nodeId);
+            if (!node || !node.children?.length) {
+                alert('Node has no children');
+                return;
+            }
+            
+            if (collapsedNodes.has(nodeId)) {
+                collapsedNodes.delete(nodeId);
+            } else {
+                collapsedNodes.add(nodeId);
+            }
+            
+            refresh();
+        };
+
+        const deleteNode = (nodeId) => {
+            if (nodeId === mindmap.id) {
+                if (confirm('Delete entire mind map?')) {
+                    mindmap = {
+                        id: generateId(),
+                        name: 'New Mind Map',
+                        color: '#3b6bb0',
+                        x: 600,
+                        y: 200,
+                        children: []
+                    };
+                    collapsedNodes.clear();
+                    refresh();
+                }
+                return;
+            }
+
+            const deleteFromParent = (parent, id) => {
+                if (parent.children) {
+                    const index = parent.children.findIndex(child => child.id === id);
+                    if (index !== -1) {
+                        parent.children.splice(index, 1);
+                        return true;
+                    }
+                    for (const child of parent.children) {
+                        if (deleteFromParent(child, id)) return true;
+                    }
+                }
+                return false;
+            };
+
+            if (confirm('Delete this node and all its children?')) {
+                deleteFromParent(mindmap, nodeId);
+                refresh();
             }
         };
 
@@ -882,10 +1112,7 @@
                 // Double-click edit
                 card.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
-                    currentNodeToEdit = node.id;
-                    document.getElementById('editNodeId').innerText = node.id;
-                    document.getElementById('editNodeName').value = node.name;
-                    document.getElementById('editModal').classList.add('show');
+                    editNodeById(node.id);
                 });
 
                 canvas.appendChild(card);
@@ -1025,64 +1252,22 @@
             refresh();
         });
 
-        // Add child
+        // Add child (global)
         document.getElementById('addChildBtn').addEventListener('click', () => {
             const targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):') || mindmap.id;
-            const node = findNodeById(mindmap, targetId);
-            
-            if (!node) {
-                alert('Node not found!');
-                return;
-            }
-            
-            const newName = prompt('Enter child name:');
-            if (!newName) return;
-            
-            const newX = node.x + 120;
-            const newY = node.y + 100;
-            
-            node.children.push({
-                id: generateId(),
-                name: newName,
-                color: '#7f8c8d',
-                x: newX,
-                y: newY,
-                children: []
-            });
-            
-            refresh();
+            addChildToNode(targetId);
         });
 
-        // Edit node
+        // Edit node (global)
         document.getElementById('editNodeBtn').addEventListener('click', () => {
             const id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):') || mindmap.id;
-            const node = findNodeById(mindmap, id);
-            
-            if (!node) {
-                alert('Node not found!');
-                return;
-            }
-            
-            currentNodeToEdit = id;
-            document.getElementById('editNodeId').innerText = id;
-            document.getElementById('editNodeName').value = node.name;
-            document.getElementById('editModal').classList.add('show');
+            editNodeById(id);
         });
 
-        // Apply color
+        // Apply color (global)
         document.getElementById('applyColorBtn').addEventListener('click', () => {
             const id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):') || mindmap.id;
-            const node = findNodeById(mindmap, id);
-            
-            if (!node) {
-                alert('Node not found!');
-                return;
-            }
-            
-            currentNodeToColor = id;
-            document.getElementById('colorNodeId').innerText = id;
-            document.getElementById('nodeColorModalPicker').value = node.color || '#2d6bcb';
-            document.getElementById('colorModal').classList.add('show');
+            changeNodeColor(id);
         });
 
         // Reset layout
@@ -1102,24 +1287,10 @@
             refresh();
         });
 
-        // Collapse/expand toggle
+        // Collapse/expand toggle (global)
         document.getElementById('collapseToggleBtn').addEventListener('click', () => {
             const id = prompt('Enter node ID to collapse/expand:');
-            if (!id) return;
-            
-            const node = findNodeById(mindmap, id);
-            if (!node || !node.children?.length) {
-                alert('Node has no children');
-                return;
-            }
-            
-            if (collapsedNodes.has(id)) {
-                collapsedNodes.delete(id);
-            } else {
-                collapsedNodes.add(id);
-            }
-            
-            refresh();
+            if (id) toggleCollapseNode(id);
         });
 
         // Collapse all
@@ -1234,8 +1405,8 @@
         });
 
         // Initialize
-        disableContextMenu();
         setupPanning();
+        setupContextMenu();
         refresh();
 
         // Redraw branches on window resize
