@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>flux · draggable mindmap</title>
+    <!-- Font Awesome & Inter -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- interact.js for smooth drag -->
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.17/dist/interact.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(145deg, #f0f5fe 0%, #e9f0fa 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .app-container {
+            width: 1400px;
+            max-width: 100%;
+            height: 90vh;
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 42px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .toolbar {
+            padding: 18px 28px;
+            background: rgba(255,255,255,0.4);
+            border-bottom: 1px solid rgba(255,255,255,0.6);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .logo h1 {
+            font-weight: 600;
+            font-size: 1.6rem;
+            color: #1b2b4b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .logo i {
+            color: #2d6bcb;
+            font-size: 1.9rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.75);
+            border: 1px solid rgba(46, 91, 150, 0.2);
+            padding: 10px 18px;
+            border-radius: 40px;
+            font-weight: 500;
+            color: #152b44;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+
+        .btn i {
+            color: #2d6bcb;
+        }
+
+        .btn:hover {
+            background: white;
+            border-color: #2d6bcb80;
+            transform: translateY(-1px);
+        }
+
+        .btn.share-btn {
+            background: #1d3d6d;
+            color: white;
+        }
+        .btn.share-btn i { color: white; }
+
+        .workspace {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* left panel */
+        .structure-panel {
+            width: 260px;
+            background: rgba(245, 248, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(255,255,255,0.7);
+            padding: 20px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow-y: auto;
+        }
+
+        .panel-section {
+            background: rgba(255,255,255,0.4);
+            border-radius: 32px;
+            padding: 18px 14px;
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .section-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #31567e;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tree-view {
+            font-size: 0.95rem;
+        }
+        .tree-node {
+            padding: 8px 8px 8px 20px;
+            margin: 4px 0;
+            background: rgba(255,255,255,0.3);
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.7);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .tree-node i { color: #2d6bcb; width: 20px; }
+        .tree-node .label { flex:1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* main canvas — absolute positioning for drag */
+        .mindmap-area {
+            flex: 1;
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(6px);
+            position: relative;
+            overflow: auto;
+        }
+
+        #mindmapCanvas {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-width: 100%;
+            min-height: 100%;
+        }
+
+        /* node cards – draggable */
+        .node-card {
+            position: absolute;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(4px);
+            border-radius: 32px;
+            padding: 16px 24px;
+            box-shadow: 0 12px 28px -10px rgba(20,45,90,0.4);
+            border: 2px solid transparent;
+            border-left: 6px solid;
+            min-width: 150px;
+            text-align: center;
+            cursor: grab;
+            user-select: none;
+            transition: box-shadow 0.1s, border-color 0.1s;
+            font-weight: 500;
+            color: #11223b;
+            will-change: transform;
+            touch-action: none; /* for drag */
+        }
+
+        .node-card:active {
+            cursor: grabbing;
+            box-shadow: 0 20px 35px -10px #1d3d6d;
+            z-index: 10000;
+        }
+
+        .node-card .drag-handle {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            font-size: 0.9rem;
+            color: #94a9c9;
+            cursor: grab;
+        }
+
+        /* branch lines (SVG container) */
+        .branch-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .branch-layer svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .branch-line {
+            stroke: #94a9c9;
+            stroke-width: 2.5;
+            stroke-dasharray: none;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
+        }
+
+        /* color picker */
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.5);
+            padding: 5px 15px;
+            border-radius: 40px;
+        }
+        #nodeColorPicker { width: 40px; height: 40px; border-radius: 40px; border: 2px solid white; cursor: pointer; }
+
+        /* modals */
+        .modal-overlay {
+            position: fixed;
+            top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.2s;
+        }
+        .modal-overlay.show { visibility: visible; opacity: 1; }
+        .modal-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 48px;
+            padding: 36px 40px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 40px 70px -15px #11203570;
+        }
+        .input-group { margin-bottom: 24px; }
+        .input-group label { font-weight: 500; color: #2f496e; display: block; margin-bottom: 6px; }
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 15px 20px;
+            border-radius: 50px;
+            border: 1px solid #d6e2f0;
+            font-size: 1rem;
+        }
+        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="toolbar">
+        <div class="logo"><h1><i class="fas fa-arrows-up-down-left-right"></i> flux</h1></div>
+        <div class="action-buttons">
+            <button class="btn" id="addRootBtn"><i class="fas fa-plus-circle"></i> New root</button>
+            <button class="btn" id="addChildBtn"><i class="fas fa-sitemap"></i> Add child</button>
+            <button class="btn" id="editNodeBtn"><i class="fas fa-pen-fancy"></i> Edit</button>
+            <div class="color-picker-wrapper">
+                <label><i class="fas fa-palette"></i></label>
+                <input type="color" id="nodeColorPicker" value="#2d6bcb">
+            </div>
+            <button class="btn" id="applyColorBtn"><i class="fas fa-fill-drip"></i> Apply color</button>
+            <button class="btn" id="resetLayoutBtn"><i class="fas fa-rotate"></i> Reset layout</button>
+            <button class="btn" id="exportBtn"><i class="fas fa-download"></i> Export</button>
+            <button class="btn share-btn" id="shareBtn"><i class="fas fa-share-nodes"></i> Share</button>
+        </div>
+    </div>
+    <div class="workspace">
+        <div class="structure-panel">
+            <div class="panel-section">
+                <div class="section-title"><i class="fas fa-diagram-project"></i> branches</div>
+                <div class="tree-view" id="treeView"></div>
+                <button class="btn" id="collapseToggleBtn" style="width:100%; margin-top:12px;"><i class="fas fa-eye-slash"></i> collapse/expand</button>
+            </div>
+        </div>
+        <div class="mindmap-area" id="mindmapArea">
+            <div id="mindmapCanvas">
+                <svg class="branch-layer" id="branchSvg"></svg>
+                <!-- nodes will be injected here as absolute divs -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- modals -->
+<div class="modal-overlay" id="editModal"><div class="modal-card"><h2>Edit node</h2><div class="input-group"><label>ID: <span id="editNodeId">-</span></label><input type="text" id="editNodeName" placeholder="New name"></div><div class="modal-actions"><button class="btn" id="cancelEdit">Cancel</button><button class="btn share-btn" id="saveEdit">Save</button></div></div></div>
+<div class="modal-overlay" id="colorModal"><div class="modal-card"><h2>Change color</h2><div class="input-group"><label>Node ID: <span id="colorNodeId">-</span></label><input type="color" id="nodeColorModalPicker" value="#2d6bcb"></div><div class="modal-actions"><button class="btn" id="cancelColor">Cancel</button><button class="btn share-btn" id="applyColorModal">Apply</button></div></div></div>
+<div class="modal-overlay" id="shareModal"><div class="modal-card"><h2>Share map</h2><div class="input-group"><textarea id="shareData" rows="5" readonly></textarea></div><div class="modal-actions"><button class="btn" id="copyShareBtn">Copy</button><button class="btn share-btn" id="closeShareBtn">Close</button></div></div></div>
+
+<script>
+    (function() {
+        // ----- model with positions
+        let mindmap = {
+            id: 'root1',
+            name: 'Discovery',
+            color: '#3b6bb0',
+            x: 600, y: 200,
+            children: [
+                { id: 'child1', name: 'Explore', color: '#4a90e2', x: 400, y: 350, children: [] },
+                { id: 'child2', name: 'Tasks', color: '#e67e22', x: 750, y: 350, children: [
+                    { id: 'sub2a', name: 'Design', color: '#2ecc71', x: 650, y: 500, children: [] },
+                    { id: 'sub2b', name: 'Code', color: '#e74c3c', x: 850, y: 500, children: [] }
+                ]},
+                { id: 'child3', name: 'Notes', color: '#9b59b6', x: 500, y: 520, children: [] }
+            ]
+        };
+
+        let collapsedNodes = new Set(); // no collapse by default
+        let nodeMap = new Map(); // id -> DOM element (for lines)
+        let dragOffsets = new Map(); // store per-node drag offset
+
+        // ----- helpers
+        function generateId() { return 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2,6); }
+
+        function findNodeById(node, id) {
+            if (node.id === id) return node;
+            if (node.children) for (let c of node.children) { let f = findNodeById(c, id); if (f) return f; }
+            return null;
+        }
+
+        function getAllNodes() { let arr=[]; function t(n){ arr.push(n); n.children?.forEach(t); } t(mindmap); return arr; }
+
+        // ----- render tree view (left)
+        function renderTreeView() {
+            const container = document.getElementById('treeView');
+            function r(node, depth=0) {
+                const d = document.createElement('div');
+                d.className = 'tree-node';
+                d.style.paddingLeft = (depth*20+8)+'px';
+                d.innerHTML = `<i class="fas fa-circle-nodes" style="color:${node.color||'#2d6bcb'}"></i><span class="label">${node.name}</span>`;
+                d.addEventListener('click', ()=> {
+                    let id = prompt('Enter node ID to collapse/expand (or leave empty to toggle this)', node.id);
+                    if (!id) id = node.id;
+                    const n = findNodeById(mindmap, id);
+                    if (n && n.children?.length) {
+                        if (collapsedNodes.has(id)) collapsedNodes.delete(id); else collapsedNodes.add(id);
+                        renderMindMap(); renderTreeView();
+                    } else alert('Node has no children or not found');
+                });
+                container.appendChild(d);
+                if (!collapsedNodes.has(node.id) && node.children) node.children.forEach(c => r(c, depth+1));
+            }
+            container.innerHTML = '';
+            r(mindmap);
+        }
+
+        // ----- draw svg lines between parent and children (if not collapsed)
+        function drawLines() {
+            const svg = document.getElementById('branchSvg');
+            svg.innerHTML = '';
+            const nodes = getAllNodes();
+            const parentMap = new Map();
+            function traverse(p, node) { parentMap.set(node.id, p); node.children?.forEach(c => traverse(node, c)); }
+            traverse(null, mindmap);
+
+            for (let node of nodes) {
+                if (collapsedNodes.has(node.id) || !parentMap.get(node.id)) continue;
+                const parent = parentMap.get(node.id);
+                if (!parent) continue;
+                const parentEl = nodeMap.get(parent.id);
+                const childEl = nodeMap.get(node.id);
+                if (!parentEl || !childEl) continue;
+
+                const parentRect = parentEl.getBoundingClientRect();
+                const childRect = childEl.getBoundingClientRect();
+                const canvas = document.getElementById('mindmapCanvas');
+                const canvasRect = canvas.getBoundingClientRect();
+
+                // convert to canvas relative coordinates
+                const x1 = parentRect.left + parentRect.width/2 - canvasRect.left + canvas.scrollLeft;
+                const y1 = parentRect.top + parentRect.height - canvasRect.top + canvas.scrollTop - 6;
+                const x2 = childRect.left + childRect.width/2 - canvasRect.left + canvas.scrollLeft;
+                const y2 = childRect.top - canvasRect.top + canvas.scrollTop + 6;
+
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", x1);
+                line.setAttribute("y1", y1);
+                line.setAttribute("x2", x2);
+                line.setAttribute("y2", y2);
+                line.setAttribute("stroke", node.color || "#94a9c9");
+                line.setAttribute("stroke-width", "2.5");
+                line.setAttribute("stroke-dasharray", "5,3");
+                line.setAttribute("class", "branch-line");
+                svg.appendChild(line);
+            }
+        }
+
+        // ----- render draggable nodes with interact.js
+        function renderMindMap() {
+            const canvas = document.getElementById('mindmapCanvas');
+            // remove all nodes except svg layer
+            Array.from(canvas.children).forEach(el => { if (el.id !== 'branchSvg') el.remove(); });
+            nodeMap.clear();
+
+            function addNode(node) {
+                if (collapsedNodes.has(node.id) && node !== mindmap) return; // hide collapsed branches (but root always visible)
+
+                const card = document.createElement('div');
+                card.className = 'node-card';
+                card.id = 'node-' + node.id;
+                card.setAttribute('data-id', node.id);
+                card.style.left = node.x + 'px';
+                card.style.top = node.y + 'px';
+                card.style.borderLeftColor = node.color || '#2d6bcb';
+                card.style.backgroundColor = node.color ? node.color+'20' : 'rgba(255,255,255,0.95)';
+                card.innerHTML = `<div>${node.name}</div><div class="drag-handle"><i class="fas fa-grip-lines"></i></div>`;
+
+                // double-click edit
+                card.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    currentNodeToEdit = node.id;
+                    document.getElementById('editNodeId').innerText = node.id;
+                    document.getElementById('editNodeName').value = node.name;
+                    document.getElementById('editModal').classList.add('show');
+                });
+
+                canvas.appendChild(card);
+                nodeMap.set(node.id, card);
+
+                // enable drag with interact
+                interact(card).draggable({
+                    inertia: false,
+                    modifiers: [],
+                    autoScroll: false,
+                    listeners: {
+                        start (event) {
+                            const rect = event.target.getBoundingClientRect();
+                            dragOffsets.set(event.target.id, {
+                                x: event.clientX - rect.left,
+                                y: event.clientY - rect.top
+                            });
+                        },
+                        move (event) {
+                            const target = event.target;
+                            const offset = dragOffsets.get(target.id);
+                            if (!offset) return;
+
+                            const x = event.clientX - offset.x;
+                            const y = event.clientY - offset.y;
+
+                            const canvasRect = canvas.getBoundingClientRect();
+                            const relativeX = x - canvasRect.left + canvas.scrollLeft;
+                            const relativeY = y - canvasRect.top + canvas.scrollTop;
+
+                            target.style.left = relativeX + 'px';
+                            target.style.top = relativeY + 'px';
+
+                            // update model position
+                            const nodeId = target.getAttribute('data-id');
+                            const node = findNodeById(mindmap, nodeId);
+                            if (node) {
+                                node.x = relativeX;
+                                node.y = relativeY;
+                            }
+
+                            drawLines(); // realtime line update
+                        },
+                        end (event) {
+                            dragOffsets.delete(event.target.id);
+                        }
+                    }
+                });
+
+                // recursively add children if not collapsed
+                if (!collapsedNodes.has(node.id) && node.children) {
+                    node.children.forEach(child => addNode(child));
+                }
+            }
+
+            addNode(mindmap);
+            drawLines();
+        }
+
+        // refresh everything
+        function refresh() {
+            renderTreeView();
+            renderMindMap();
+        }
+
+        // ----- actions
+        document.getElementById('addRootBtn').addEventListener('click', ()=>{
+            const newName = prompt('New root name:');
+            if (!newName) return;
+            const oldRoot = mindmap;
+            mindmap = { id: generateId(), name: newName, color: '#3b6bb0', x: 600, y: 150, children: [oldRoot] };
+            collapsedNodes.clear();
+            refresh();
+        });
+
+        document.getElementById('addChildBtn').addEventListener('click', ()=>{
+            let targetId = prompt('Target node ID (root: '+mindmap.id+'):') || mindmap.id;
+            const node = findNodeById(mindmap, targetId);
+            if (!node) return alert('Node not found');
+            const newName = prompt('Child name:','new');
+            if (!newName) return;
+            const newX = node.x + 120;
+            const newY = node.y + 100;
+            node.children.push({ id: generateId(), name: newName, color: '#7f8c8d', x: newX, y: newY, children: [] });
+            refresh();
+        });
+
+        document.getElementById('editNodeBtn').addEventListener('click', ()=>{
+            let id = prompt('Node ID to edit:', mindmap.id);
+            if (!id) return;
+            const node = findNodeById(mindmap, id);
+            if (!node) return alert('not found');
+            currentNodeToEdit = id;
+            document.getElementById('editNodeId').innerText = id;
+            document.getElementById('editNodeName').value = node.name;
+            document.getElementById('editModal').classList.add('show');
+        });
+
+        document.getElementById('applyColorBtn').addEventListener('click', ()=>{
+            let id = prompt('Node ID to change color:', mindmap.id);
+            if (!id) return;
+            const node = findNodeById(mindmap, id);
+            if (!node) return alert('not found');
+            currentNodeToColor = id;
+            document.getElementById('colorNodeId').innerText = id;
+            document.getElementById('nodeColorModalPicker').value = node.color || '#2d6bcb';
+            document.getElementById('colorModal').classList.add('show');
+        });
+
+        document.getElementById('resetLayoutBtn').addEventListener('click', ()=>{
+            // simple tree layout
+            let yStart = 150;
+            function layout(node, x, y) {
+                node.x = x; node.y = y;
+                if (node.children) {
+                    node.children.forEach((child, i) => {
+                        layout(child, x + 180 + i*40, y + 120);
+                    });
+                }
+            }
+            layout(mindmap, 600, 150);
+            refresh();
+        });
+
+        document.getElementById('collapseToggleBtn').addEventListener('click', ()=>{
+            let id = prompt('Node ID to collapse/expand:');
+            if (!id) return;
+            const node = findNodeById(mindmap, id);
+            if (!node || !node.children?.length) return alert('no children');
+            if (collapsedNodes.has(id)) collapsedNodes.delete(id); else collapsedNodes.add(id);
+            refresh();
+        });
+
+        // Export / Share
+        document.getElementById('exportBtn').addEventListener('click', ()=>{
+            const dataStr = JSON.stringify(mindmap, null, 2);
+            const blob = new Blob([dataStr], {type:'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'flux-mindmap.json'; a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('shareBtn').addEventListener('click', ()=>{
+            document.getElementById('shareData').value = JSON.stringify(mindmap, null, 2);
+            document.getElementById('shareModal').classList.add('show');
+        });
+        document.getElementById('closeShareBtn').addEventListener('click', ()=> document.getElementById('shareModal').classList.remove('show'));
+        document.getElementById('copyShareBtn').addEventListener('click', ()=>{
+            navigator.clipboard.writeText(JSON.stringify(mindmap, null, 2));
+            alert('Copied!');
+        });
+
+        // modal handlers
+        document.getElementById('cancelEdit').addEventListener('click', ()=> document.getElementById('editModal').classList.remove('show'));
+        document.getElementById('saveEdit').addEventListener('click', ()=>{
+            const newName = document.getElementById('editNodeName').value.trim();
+            if (!newName) return alert('name required');
+            if (currentNodeToEdit) {
+                const node = findNodeById(mindmap, currentNodeToEdit);
+                if (node) node.name = newName;
+            }
+            document.getElementById('editModal').classList.remove('show');
+            refresh();
+        });
+        document.getElementById('cancelColor').addEventListener('click', ()=> document.getElementById('colorModal').classList.remove('show'));
+        document.getElementById('applyColorModal').addEventListener('click', ()=>{
+            const newColor = document.getElementById('nodeColorModalPicker').value;
+            if (currentNodeToColor) {
+                const node = findNodeById(mindmap, currentNodeToColor);
+                if (node) node.color = newColor;
+            }
+            document.getElementById('colorModal').classList.remove('show');
+            refresh();
+        });
+
+        // close modals on overlay click
+        ['editModal','colorModal','shareModal'].forEach(id => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal-overlay')) document.getElementById(id).classList.remove('show');
+            });
+        });
+
+        // initial
+        refresh();
+
+        // update lines on scroll/resize
+        window.addEventListener('scroll', ()=> drawLines(), true);
+        window.addEventListener('resize', ()=> drawLines());
+        setInterval(() => drawLines(), 200); // fallback
+    })();
+</script>
+</body>
+</html>
