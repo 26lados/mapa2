@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>flux · right‑click edit</title>
+    <title>flux · fixed drag & edit</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -233,44 +233,7 @@
             filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
         }
 
-        /* right-click context menu (custom) */
-        .context-menu {
-            position: fixed;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(12px);
-            border-radius: 28px;
-            padding: 8px 0;
-            min-width: 180px;
-            box-shadow: 0 20px 40px -12px rgba(0,20,40,0.4);
-            border: 1px solid rgba(255,255,255,0.7);
-            z-index: 30000;
-            display: none;
-        }
-        .context-menu.show {
-            display: block;
-        }
-        .context-menu-item {
-            padding: 12px 22px;
-            font-size: 0.95rem;
-            color: #1d2f47;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: 0.1s;
-        }
-        .context-menu-item i {
-            color: #2d6bcb;
-            width: 20px;
-            font-size: 1rem;
-        }
-        .context-menu-item:hover {
-            background: rgba(45, 107, 203, 0.1);
-        }
-        .context-menu-item:first-child:hover { border-radius: 28px 28px 0 0; }
-        .context-menu-item:last-child:hover { border-radius: 0 0 28px 28px; }
-
-        /* color picker in toolbar */
+        /* color picker */
         .color-picker-wrapper {
             display: flex;
             align-items: center;
@@ -346,18 +309,10 @@
         <div class="mindmap-area" id="mindmapArea">
             <div id="mindmapCanvas">
                 <svg class="branch-layer" id="branchSvg"></svg>
-                <!-- nodes go here -->
+                <!-- nodes will be injected here -->
             </div>
         </div>
     </div>
-</div>
-
-<!-- custom right‑click menu -->
-<div class="context-menu" id="contextMenu">
-    <div class="context-menu-item" id="ctxEdit"><i class="fas fa-pen"></i> Edit name</div>
-    <div class="context-menu-item" id="ctxColor"><i class="fas fa-palette"></i> Change color</div>
-    <div class="context-menu-item" id="ctxAddChild"><i class="fas fa-sitemap"></i> Add child</div>
-    <div class="context-menu-item" id="ctxCollapse"><i class="fas fa-compress-alt"></i> Toggle collapse</div>
 </div>
 
 <!-- modals -->
@@ -383,12 +338,11 @@
             ]
         };
 
-        let collapsedNodes = new Set();
+        let collapsedNodes = new Set(); // no collapse by default
         let nodeMap = new Map(); // id -> DOM element
         let dragOffsets = new Map();
-        let currentNodeForContext = null; // node id that was right-clicked
 
-        // global modal targets
+        // global variables for modal targets
         let currentNodeToEdit = null;
         let currentNodeToColor = null;
 
@@ -408,7 +362,7 @@
 
         function getAllNodes() { let arr=[]; function t(n){ arr.push(n); n.children?.forEach(t); } t(mindmap); return arr; }
 
-        // ----- render tree view (left)
+        // ----- render tree view (left) - click to collapse/expand
         function renderTreeView() {
             const container = document.getElementById('treeView');
             function r(node, depth=0) {
@@ -436,13 +390,16 @@
             r(mindmap);
         }
 
-        // ----- draw svg lines
+        // ----- draw svg lines between parent and children
         function drawLines() {
             const svg = document.getElementById('branchSvg');
             svg.innerHTML = '';
             const nodes = getAllNodes();
             const parentMap = new Map();
-            function traverse(p, node) { parentMap.set(node.id, p); node.children?.forEach(c => traverse(node, c)); }
+            function traverse(p, node) { 
+                parentMap.set(node.id, p); 
+                node.children?.forEach(c => traverse(node, c)); 
+            }
             traverse(null, mindmap);
 
             for (let node of nodes) {
@@ -477,23 +434,16 @@
             }
         }
 
-        // ----- show context menu
-        function showContextMenu(e, nodeId) {
-            e.preventDefault();
-            currentNodeForContext = nodeId;
-            const menu = document.getElementById('contextMenu');
-            menu.style.left = e.clientX + 'px';
-            menu.style.top = e.clientY + 'px';
-            menu.classList.add('show');
-        }
-
-        // ----- render draggable nodes with right-click
+        // ----- render draggable nodes
         function renderMindMap() {
             const canvas = document.getElementById('mindmapCanvas');
+            // remove all nodes except svg layer
             Array.from(canvas.children).forEach(el => { if (el.id !== 'branchSvg') el.remove(); });
             nodeMap.clear();
 
             function addNode(node) {
+                // if collapsed and not root, skip children but we still add the node itself
+                // we always add the node, but if it's collapsed we don't add its children
                 const card = document.createElement('div');
                 card.className = 'node-card';
                 card.id = 'node-' + node.id;
@@ -504,14 +454,7 @@
                 card.style.backgroundColor = node.color ? node.color+'20' : 'rgba(255,255,255,0.95)';
                 card.innerHTML = `<div>${node.name}</div><div class="drag-handle"><i class="fas fa-grip-lines"></i></div>`;
 
-                // RIGHT CLICK on node
-                card.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    showContextMenu(e, node.id);
-                });
-
-                // double-click as fallback
+                // double-click edit
                 card.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
                     currentNodeToEdit = node.id;
@@ -523,7 +466,7 @@
                 canvas.appendChild(card);
                 nodeMap.set(node.id, card);
 
-                // enable drag with interact
+                // enable drag with interact - FIXED: properly detach from clicks
                 interact(card).draggable({
                     inertia: false,
                     modifiers: [],
@@ -552,12 +495,14 @@
                             target.style.left = relativeX + 'px';
                             target.style.top = relativeY + 'px';
 
+                            // update model position
                             const nodeId = target.getAttribute('data-id');
                             const node = findNodeById(mindmap, nodeId);
                             if (node) {
                                 node.x = relativeX;
                                 node.y = relativeY;
                             }
+
                             drawLines();
                         },
                         end (event) {
@@ -566,6 +511,7 @@
                     }
                 });
 
+                // recursively add children if not collapsed
                 if (!collapsedNodes.has(node.id) && node.children) {
                     node.children.forEach(child => addNode(child));
                 }
@@ -575,41 +521,39 @@
             drawLines();
         }
 
-        // ----- refresh
+        // refresh everything
         function refresh() {
             renderTreeView();
             renderMindMap();
         }
 
-        // ----- context menu actions
-        document.getElementById('ctxEdit').addEventListener('click', ()=>{
-            if (!currentNodeForContext) return;
-            const node = findNodeById(mindmap, currentNodeForContext);
-            if (!node) return;
-            currentNodeToEdit = node.id;
-            document.getElementById('editNodeId').innerText = node.id;
-            document.getElementById('editNodeName').value = node.name;
-            document.getElementById('editModal').classList.add('show');
-            document.getElementById('contextMenu').classList.remove('show');
+        // ----- FIXED BUTTON HANDLERS -----
+        document.getElementById('addRootBtn').addEventListener('click', ()=>{
+            const newName = prompt('New root name:');
+            if (!newName) return;
+            const oldRoot = mindmap;
+            mindmap = { 
+                id: generateId(), 
+                name: newName, 
+                color: '#3b6bb0', 
+                x: 600, y: 150, 
+                children: [oldRoot] 
+            };
+            collapsedNodes.clear();
+            refresh();
         });
 
-        document.getElementById('ctxColor').addEventListener('click', ()=>{
-            if (!currentNodeForContext) return;
-            const node = findNodeById(mindmap, currentNodeForContext);
-            if (!node) return;
-            currentNodeToColor = node.id;
-            document.getElementById('colorNodeId').innerText = node.id;
-            document.getElementById('nodeColorModalPicker').value = node.color || '#2d6bcb';
-            document.getElementById('colorModal').classList.add('show');
-            document.getElementById('contextMenu').classList.remove('show');
-        });
-
-        document.getElementById('ctxAddChild').addEventListener('click', ()=>{
-            if (!currentNodeForContext) return;
-            const node = findNodeById(mindmap, currentNodeForContext);
-            if (!node) return;
+        document.getElementById('addChildBtn').addEventListener('click', ()=>{
+            let targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):');
+            if (!targetId) targetId = mindmap.id;
+            const node = findNodeById(mindmap, targetId);
+            if (!node) {
+                alert('Node not found');
+                return;
+            }
             const newName = prompt('Enter child name:');
             if (!newName) return;
+            // position slightly offset from parent
             const newX = node.x + 120;
             const newY = node.y + 100;
             node.children.push({ 
@@ -621,59 +565,16 @@
                 children: [] 
             });
             refresh();
-            document.getElementById('contextMenu').classList.remove('show');
-        });
-
-        document.getElementById('ctxCollapse').addEventListener('click', ()=>{
-            if (!currentNodeForContext) return;
-            const node = findNodeById(mindmap, currentNodeForContext);
-            if (!node || !node.children || node.children.length === 0) {
-                alert('No children to collapse');
-                return;
-            }
-            if (collapsedNodes.has(node.id)) collapsedNodes.delete(node.id);
-            else collapsedNodes.add(node.id);
-            refresh();
-            document.getElementById('contextMenu').classList.remove('show');
-        });
-
-        // hide context menu on click elsewhere
-        window.addEventListener('click', (e) => {
-            document.getElementById('contextMenu').classList.remove('show');
-        });
-        window.addEventListener('contextmenu', (e) => {
-            // if right click outside node, hide menu
-            if (!e.target.closest('.node-card')) {
-                document.getElementById('contextMenu').classList.remove('show');
-            }
-        });
-
-        // ----- button handlers (same as before, fully working)
-        document.getElementById('addRootBtn').addEventListener('click', ()=>{
-            const newName = prompt('New root name:');
-            if (!newName) return;
-            const oldRoot = mindmap;
-            mindmap = { id: generateId(), name: newName, color: '#3b6bb0', x: 600, y: 150, children: [oldRoot] };
-            collapsedNodes.clear();
-            refresh();
-        });
-
-        document.getElementById('addChildBtn').addEventListener('click', ()=>{
-            let targetId = prompt('Enter parent node ID (root: ' + mindmap.id + '):') || mindmap.id;
-            const node = findNodeById(mindmap, targetId);
-            if (!node) { alert('Node not found'); return; }
-            const newName = prompt('Enter child name:');
-            if (!newName) return;
-            const newX = node.x + 120;
-            const newY = node.y + 100;
-            node.children.push({ id: generateId(), name: newName, color: '#7f8c8d', x: newX, y: newY, children: [] });
-            refresh();
         });
 
         document.getElementById('editNodeBtn').addEventListener('click', ()=>{
-            let id = prompt('Enter node ID to edit (root: ' + mindmap.id + '):') || mindmap.id;
+            let id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):');
+            if (!id) id = mindmap.id;
             const node = findNodeById(mindmap, id);
-            if (!node) { alert('Node not found'); return; }
+            if (!node) {
+                alert('Node not found');
+                return;
+            }
             currentNodeToEdit = id;
             document.getElementById('editNodeId').innerText = id;
             document.getElementById('editNodeName').value = node.name;
@@ -681,9 +582,13 @@
         });
 
         document.getElementById('applyColorBtn').addEventListener('click', ()=>{
-            let id = prompt('Enter node ID to change color (root: ' + mindmap.id + '):') || mindmap.id;
+            let id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):');
+            if (!id) id = mindmap.id;
             const node = findNodeById(mindmap, id);
-            if (!node) { alert('Node not found'); return; }
+            if (!node) {
+                alert('Node not found');
+                return;
+            }
             currentNodeToColor = id;
             document.getElementById('colorNodeId').innerText = id;
             document.getElementById('nodeColorModalPicker').value = node.color || '#2d6bcb';
@@ -691,8 +596,10 @@
         });
 
         document.getElementById('resetLayoutBtn').addEventListener('click', ()=>{
+            // simple tree layout
             function layout(node, x, y, xOffset = 180, yOffset = 120) {
-                node.x = x; node.y = y;
+                node.x = x;
+                node.y = y;
                 if (node.children) {
                     node.children.forEach((child, i) => {
                         layout(child, x + xOffset + i*30, y + yOffset, xOffset * 0.8, yOffset);
@@ -707,11 +614,16 @@
             let id = prompt('Enter node ID to collapse/expand:');
             if (!id) return;
             const node = findNodeById(mindmap, id);
-            if (!node || !node.children || node.children.length === 0) { alert('Node has no children'); return; }
-            if (collapsedNodes.has(id)) collapsedNodes.delete(id); else collapsedNodes.add(id);
+            if (!node || !node.children || node.children.length === 0) {
+                alert('Node has no children');
+                return;
+            }
+            if (collapsedNodes.has(id)) collapsedNodes.delete(id);
+            else collapsedNodes.add(id);
             refresh();
         });
 
+        // Export / Share
         document.getElementById('exportBtn').addEventListener('click', ()=>{
             const dataStr = JSON.stringify(mindmap, null, 2);
             const blob = new Blob([dataStr], {type:'application/json'});
@@ -727,7 +639,9 @@
         });
 
         // modal buttons
-        document.getElementById('cancelEdit').addEventListener('click', ()=> document.getElementById('editModal').classList.remove('show'));
+        document.getElementById('cancelEdit').addEventListener('click', ()=> {
+            document.getElementById('editModal').classList.remove('show');
+        });
         document.getElementById('saveEdit').addEventListener('click', ()=>{
             const newName = document.getElementById('editNodeName').value.trim();
             if (!newName) { alert('Name cannot be empty'); return; }
@@ -739,7 +653,9 @@
             refresh();
         });
 
-        document.getElementById('cancelColor').addEventListener('click', ()=> document.getElementById('colorModal').classList.remove('show'));
+        document.getElementById('cancelColor').addEventListener('click', ()=> {
+            document.getElementById('colorModal').classList.remove('show');
+        });
         document.getElementById('applyColorModal').addEventListener('click', ()=>{
             const newColor = document.getElementById('nodeColorModalPicker').value;
             if (currentNodeToColor) {
@@ -750,16 +666,20 @@
             refresh();
         });
 
-        document.getElementById('closeShareBtn').addEventListener('click', ()=> document.getElementById('shareModal').classList.remove('show'));
+        document.getElementById('closeShareBtn').addEventListener('click', ()=> {
+            document.getElementById('shareModal').classList.remove('show');
+        });
         document.getElementById('copyShareBtn').addEventListener('click', ()=>{
             navigator.clipboard.writeText(JSON.stringify(mindmap, null, 2));
-            alert('Copied!');
+            alert('Copied to clipboard!');
         });
 
         // close modals on overlay click
         ['editModal','colorModal','shareModal'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal-overlay')) document.getElementById(id).classList.remove('show');
+                if (e.target.classList.contains('modal-overlay')) {
+                    document.getElementById(id).classList.remove('show');
+                }
             });
         });
 
@@ -770,6 +690,7 @@
         const canvas = document.getElementById('mindmapCanvas');
         canvas.addEventListener('scroll', ()=> drawLines());
         window.addEventListener('resize', ()=> drawLines());
+        // periodic redraw to catch any missed updates
         setInterval(() => drawLines(), 300);
     })();
 </script>
