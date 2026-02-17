@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>canvas · rock-solid branches</title>
+    <title>canv</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -261,7 +261,7 @@
             transform-origin: 0 0;
         }
 
-        /* NEW APPROACH: Use HTML elements for branches */
+        /* Branch container - fixed positioning */
         .branch-container {
             position: absolute;
             top: 0;
@@ -274,16 +274,16 @@
 
         .branch {
             position: absolute;
-            background: linear-gradient(45deg, #94a9c9, #b7c9e5);
             height: 3px;
             transform-origin: 0 0;
             pointer-events: none;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border-radius: 3px;
+            z-index: 50;
         }
 
         .dark-mode .branch {
-            background: linear-gradient(45deg, #4a5a7a, #5a6a8a);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
 
         .node-card {
@@ -497,8 +497,9 @@
         <div class="mindmap-area" id="mindmapArea">
             <div id="viewport">
                 <div id="mindmapCanvas">
+                    <!-- Branch container - stays separate from nodes -->
                     <div class="branch-container" id="branchContainer"></div>
-                    <!-- nodes will be inserted here -->
+                    <!-- Nodes will be inserted here -->
                 </div>
             </div>
             <div class="zoom-controls">
@@ -576,6 +577,7 @@
         // State
         let collapsedNodes = new Set();
         let nodeMap = new Map(); // id -> DOM element
+        let dragOffsets = new Map(); // Store drag offsets per node
         
         // Transform state
         let currentScale = 1.0;
@@ -614,7 +616,9 @@
             const nodes = [];
             const traverse = (node) => {
                 nodes.push(node);
-                node.children?.forEach(traverse);
+                if (node.children) {
+                    node.children.forEach(child => traverse(child));
+                }
             };
             traverse(mindmap);
             return nodes;
@@ -623,6 +627,7 @@
         // ==================== RENDERING ====================
         const renderTreeView = () => {
             const container = document.getElementById('treeView');
+            if (!container) return;
             
             const renderNode = (node, depth = 0) => {
                 const div = document.createElement('div');
@@ -658,25 +663,28 @@
             renderNode(mindmap);
         };
 
-        // ==================== NEW BRANCH RENDERING ====================
-        // This uses HTML divs with transforms instead of SVG
-        // Branches are recalculated whenever nodes move and never fail
+        // ==================== BRANCH RENDERING ====================
         const renderBranches = () => {
             const container = document.getElementById('branchContainer');
             if (!container) return;
             
             container.innerHTML = '';
             
-            // Build parent map
+            // Build parent-child relationships
             const parentMap = new Map();
             const traverse = (parent, node) => {
-                parentMap.set(node.id, parent);
-                node.children?.forEach(child => traverse(node, child));
+                if (parent) {
+                    parentMap.set(node.id, parent);
+                }
+                if (node.children) {
+                    node.children.forEach(child => traverse(node, child));
+                }
             };
             traverse(null, mindmap);
 
-            // Draw branches for visible nodes
+            // Draw branches for each node that has a parent
             for (const node of getAllNodes()) {
+                // Skip if node is collapsed or has no parent
                 if (collapsedNodes.has(node.id)) continue;
                 
                 const parent = parentMap.get(node.id);
@@ -684,19 +692,20 @@
                 
                 const parentEl = nodeMap.get(parent.id);
                 const childEl = nodeMap.get(node.id);
+                
                 if (!parentEl || !childEl) continue;
 
                 // Get positions
-                const parentLeft = parseFloat(parentEl.style.left) || 0;
-                const parentTop = parseFloat(parentEl.style.top) || 0;
-                const childLeft = parseFloat(childEl.style.left) || 0;
-                const childTop = parseFloat(childEl.style.top) || 0;
+                const parentLeft = parseFloat(parentEl.style.left) || parent.x;
+                const parentTop = parseFloat(parentEl.style.top) || parent.y;
+                const childLeft = parseFloat(childEl.style.left) || node.x;
+                const childTop = parseFloat(childEl.style.top) || node.y;
 
                 const parentWidth = parentEl.offsetWidth;
                 const parentHeight = parentEl.offsetHeight;
                 const childWidth = childEl.offsetWidth;
 
-                // Calculate start and end points
+                // Calculate connection points
                 const startX = parentLeft + parentWidth / 2;
                 const startY = parentTop + parentHeight;
                 const endX = childLeft + childWidth / 2;
@@ -715,25 +724,33 @@
                 branch.style.top = startY + 'px';
                 branch.style.width = length + 'px';
                 branch.style.transform = `rotate(${angle}deg)`;
-                branch.style.background = `linear-gradient(45deg, ${node.color || '#94a9c9'}, ${node.color ? adjustColor(node.color, 20) : '#b7c9e5'})`;
+                
+                // Set color based on child node
+                const color = node.color || '#94a9c9';
+                branch.style.background = `linear-gradient(90deg, ${color}, ${lightenColor(color, 30)})`;
                 
                 container.appendChild(branch);
             }
         };
 
-        // Helper to lighten/darken colors for gradient
-        const adjustColor = (color, percent) => {
-            const num = parseInt(color.replace('#', ''), 16);
-            const r = (num >> 16) + percent;
-            const g = ((num >> 8) & 0x00FF) + percent;
-            const b = (num & 0x0000FF) + percent;
-            return '#' + (0x1000000 + (r < 255 ? (r < 0 ? 0 : r) : 255) * 0x10000 + 
-                (g < 255 ? (g < 0 ? 0 : g) : 255) * 0x100 + 
-                (b < 255 ? (b < 0 ? 0 : b) : 255)).toString(16).slice(1);
+        // Helper to lighten colors
+        const lightenColor = (color, percent) => {
+            if (!color) return '#b7c9e5';
+            
+            // Handle hex colors
+            if (color.startsWith('#')) {
+                const num = parseInt(color.slice(1), 16);
+                const r = Math.min(255, (num >> 16) + percent);
+                const g = Math.min(255, ((num >> 8) & 0x00FF) + percent);
+                const b = Math.min(255, (num & 0x0000FF) + percent);
+                return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+            }
+            return color;
         };
 
         const applyTransform = () => {
             const canvas = document.getElementById('mindmapCanvas');
+            if (!canvas) return;
             canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
             document.getElementById('zoomLevel').innerText = Math.round(currentScale * 100) + '%';
             renderBranches();
@@ -747,20 +764,13 @@
                 autoScroll: false,
                 listeners: {
                     start(event) {
+                        // Stop panning while dragging
                         isPanning = false;
                         
                         const target = event.target;
                         const rect = target.getBoundingClientRect();
                         
-                        interact(target).set({
-                            modifiers: [
-                                interact.modifiers.restrict({
-                                    restriction: 'parent',
-                                    elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
-                                })
-                            ]
-                        });
-
+                        // Store offset from mouse to element corner
                         dragOffsets.set(target.id, {
                             x: event.clientX - rect.left,
                             y: event.clientY - rect.top
@@ -811,10 +821,14 @@
 
         const renderMindMap = () => {
             const canvas = document.getElementById('mindmapCanvas');
+            if (!canvas) return;
             
-            // Remove all nodes except branch container
+            // Remove all nodes but keep branch container
+            const branchContainer = document.getElementById('branchContainer');
             Array.from(canvas.children).forEach(el => {
-                if (el.className !== 'branch-container') el.remove();
+                if (el !== branchContainer) {
+                    el.remove();
+                }
             });
             
             nodeMap.clear();
@@ -869,7 +883,8 @@
             const viewport = document.getElementById('viewport');
             
             viewport.addEventListener('mousedown', (e) => {
-                if (e.target === viewport || e.target.id === 'mindmapCanvas' || e.target.className === 'branch-container') {
+                // Only pan when clicking on background, not on nodes
+                if (e.target === viewport || e.target.id === 'mindmapCanvas' || e.target.classList.contains('branch-container')) {
                     isPanning = true;
                     startPanX = e.clientX - panX;
                     startPanY = e.clientY - panY;
@@ -1191,7 +1206,9 @@
         refresh();
 
         // Redraw branches on window resize
-        window.addEventListener('resize', renderBranches);
+        window.addEventListener('resize', () => {
+            renderBranches();
+        });
     })();
 </script>
 </body>
