@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mapaUMP</title>
+    <title>canvas · connect boxes</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -162,6 +162,27 @@
             background: #4a7db0;
         }
 
+        .btn.connect-btn {
+            background: #9b59b6;
+            color: white;
+        }
+        .btn.connect-btn i { color: white; }
+
+        .dark-mode .btn.connect-btn {
+            background: #8e44ad;
+        }
+
+        .btn.connect-btn.active {
+            background: #e67e22;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
         .workspace {
             display: flex;
             flex: 1;
@@ -271,7 +292,7 @@
             transform-origin: 0 0;
         }
 
-        /* Branch container */
+        /* Branch container for both tree branches and custom connections */
         .branch-container {
             position: absolute;
             top: 0;
@@ -294,6 +315,21 @@
 
         .dark-mode .branch {
             box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .branch.tree-branch {
+            opacity: 0.7;
+        }
+
+        .branch.custom-connection {
+            height: 4px;
+            background: linear-gradient(90deg, #e67e22, #f39c12) !important;
+            box-shadow: 0 0 8px rgba(230, 126, 34, 0.5);
+            z-index: 51;
+        }
+
+        .dark-mode .branch.custom-connection {
+            box-shadow: 0 0 8px rgba(243, 156, 18, 0.5);
         }
 
         .node-card {
@@ -327,6 +363,11 @@
             cursor: grabbing;
             box-shadow: 0 20px 35px -10px #1d3d6d;
             z-index: 10000;
+        }
+
+        .node-card.selected-for-connection {
+            border: 3px solid #e67e22;
+            box-shadow: 0 0 15px rgba(230, 126, 34, 0.5);
         }
 
         .node-card .drag-handle {
@@ -543,6 +584,7 @@
         <div class="action-buttons">
             <button class="btn theme-toggle" id="themeToggle"><i class="fas fa-moon"></i> Dark</button>
             <button class="btn new-map-btn" id="newMapBtn"><i class="fas fa-file"></i> New Map</button>
+            <button class="btn connect-btn" id="connectBtn"><i class="fas fa-link"></i> Connect Boxes</button>
             <button class="btn" id="addRootBtn"><i class="fas fa-plus-circle"></i> New root</button>
             <button class="btn" id="addChildBtn"><i class="fas fa-sitemap"></i> Add child</button>
             <button class="btn" id="editNodeBtn"><i class="fas fa-pen-fancy"></i> Edit</button>
@@ -664,7 +706,9 @@
                     { id: 'sub2c', name: 'Test', color: '#f1c40f', x: 750, y: 650, children: [] }
                 ]},
                 { id: 'child3', name: 'Notes', color: '#9b59b6', x: 500, y: 520, children: [] }
-            ]
+            ],
+            // Custom connections between nodes
+            connections: []
         };
 
         // State
@@ -684,6 +728,10 @@
         let startPanX = 0;
         let startPanY = 0;
 
+        // Connection mode
+        let connectionMode = false;
+        let selectedNodeForConnection = null;
+
         // Modal targets
         let currentNodeToEdit = null;
         let currentNodeToColor = null;
@@ -691,6 +739,77 @@
 
         // Theme
         let darkMode = localStorage.getItem('canvas-dark') === 'true';
+
+        // ==================== CONNECTION MODE ====================
+        const toggleConnectionMode = () => {
+            connectionMode = !connectionMode;
+            const connectBtn = document.getElementById('connectBtn');
+            
+            if (connectionMode) {
+                connectBtn.classList.add('active');
+                connectBtn.innerHTML = '<i class="fas fa-link"></i> Cancel Connection';
+                selectedNodeForConnection = null;
+                
+                // Remove any selected highlights
+                document.querySelectorAll('.node-card.selected-for-connection').forEach(el => {
+                    el.classList.remove('selected-for-connection');
+                });
+            } else {
+                connectBtn.classList.remove('active');
+                connectBtn.innerHTML = '<i class="fas fa-link"></i> Connect Boxes';
+                selectedNodeForConnection = null;
+                
+                // Remove any selected highlights
+                document.querySelectorAll('.node-card.selected-for-connection').forEach(el => {
+                    el.classList.remove('selected-for-connection');
+                });
+            }
+        };
+
+        const createConnection = (fromId, toId) => {
+            if (fromId === toId) {
+                alert("Cannot connect a node to itself");
+                return false;
+            }
+
+            // Initialize connections array if it doesn't exist
+            if (!mindmap.connections) {
+                mindmap.connections = [];
+            }
+
+            // Check if connection already exists
+            const exists = mindmap.connections.some(conn => 
+                (conn.from === fromId && conn.to === toId) || (conn.from === toId && conn.to === fromId)
+            );
+
+            if (exists) {
+                alert("Connection already exists between these nodes");
+                return false;
+            }
+
+            // Add the connection
+            mindmap.connections.push({
+                from: fromId,
+                to: toId,
+                color: '#e67e22'
+            });
+
+            return true;
+        };
+
+        const removeConnection = (fromId, toId) => {
+            if (!mindmap.connections) return false;
+            
+            const index = mindmap.connections.findIndex(conn => 
+                (conn.from === fromId && conn.to === toId) || (conn.from === toId && conn.to === fromId)
+            );
+            
+            if (index !== -1) {
+                mindmap.connections.splice(index, 1);
+                return true;
+            }
+            return false;
+        };
 
         // ==================== CONTEXT MENU ====================
         const contextMenu = document.getElementById('contextMenu');
@@ -731,6 +850,9 @@
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     contextMenu.classList.remove('show');
+                    if (connectionMode) {
+                        toggleConnectionMode();
+                    }
                 }
             });
 
@@ -782,7 +904,8 @@
                 color: '#3b6bb0',
                 x: 600,
                 y: 200,
-                children: []
+                children: [],
+                connections: []
             };
             
             collapsedNodes.clear();
@@ -874,6 +997,13 @@
             };
 
             if (confirm('Delete this node and all its children?')) {
+                // Also remove any connections involving this node
+                if (mindmap.connections) {
+                    mindmap.connections = mindmap.connections.filter(conn => 
+                        conn.from !== nodeId && conn.to !== nodeId
+                    );
+                }
+                
                 deleteFromParent(mindmap, nodeId);
                 refresh();
             }
@@ -951,7 +1081,7 @@
             
             container.innerHTML = '';
             
-            // Build parent-child relationships
+            // Build parent-child relationships for tree branches
             const parentMap = new Map();
             const traverse = (parent, node) => {
                 if (parent) {
@@ -963,7 +1093,7 @@
             };
             traverse(null, mindmap);
 
-            // Draw branches for each node that has a parent
+            // Draw tree branches (parent-child connections)
             for (const node of getAllNodes()) {
                 // Skip if node is collapsed or has no parent
                 if (collapsedNodes.has(node.id)) continue;
@@ -1004,7 +1134,7 @@
 
                 // Create branch element
                 const branch = document.createElement('div');
-                branch.className = 'branch';
+                branch.className = 'branch tree-branch';
                 branch.style.left = startX + 'px';
                 branch.style.top = startY + 'px';
                 branch.style.width = length + 'px';
@@ -1015,6 +1145,50 @@
                 branch.style.background = `linear-gradient(90deg, ${color}, ${lightenColor(color, 30)})`;
                 
                 container.appendChild(branch);
+            }
+
+            // Draw custom connections
+            if (mindmap.connections) {
+                for (const conn of mindmap.connections) {
+                    const fromEl = nodeMap.get(conn.from);
+                    const toEl = nodeMap.get(conn.to);
+                    
+                    if (!fromEl || !toEl) continue;
+
+                    const fromLeft = parseFloat(fromEl.style.left) || 0;
+                    const fromTop = parseFloat(fromEl.style.top) || 0;
+                    const toLeft = parseFloat(toEl.style.left) || 0;
+                    const toTop = parseFloat(toEl.style.top) || 0;
+
+                    const fromWidth = fromEl.offsetWidth;
+                    const fromHeight = fromEl.offsetHeight;
+                    const toWidth = toEl.offsetWidth;
+                    const toHeight = toEl.offsetHeight;
+
+                    // Connect from center of nodes
+                    const startX = fromLeft + fromWidth / 2;
+                    const startY = fromTop + fromHeight / 2;
+                    const endX = toLeft + toWidth / 2;
+                    const endY = toTop + toHeight / 2;
+
+                    const dx = endX - startX;
+                    const dy = endY - startY;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (length < 5) continue;
+                    
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                    const branch = document.createElement('div');
+                    branch.className = 'branch custom-connection';
+                    branch.style.left = startX + 'px';
+                    branch.style.top = startY + 'px';
+                    branch.style.width = length + 'px';
+                    branch.style.transform = `rotate(${angle}deg)`;
+                    branch.style.background = `linear-gradient(90deg, ${conn.color || '#e67e22'}, ${lightenColor(conn.color || '#e67e22', 30)})`;
+                    
+                    container.appendChild(branch);
+                }
             }
         };
 
@@ -1138,6 +1312,29 @@
                     editNodeById(node.id);
                 });
 
+                // Handle click for connection mode
+                card.addEventListener('click', (e) => {
+                    if (connectionMode) {
+                        e.stopPropagation();
+                        
+                        if (!selectedNodeForConnection) {
+                            // First node selected
+                            selectedNodeForConnection = node.id;
+                            card.classList.add('selected-for-connection');
+                        } else {
+                            // Second node selected - create connection
+                            if (createConnection(selectedNodeForConnection, node.id)) {
+                                // Remove highlight from first node
+                                document.querySelectorAll('.node-card.selected-for-connection').forEach(el => {
+                                    el.classList.remove('selected-for-connection');
+                                });
+                                renderBranches();
+                            }
+                            selectedNodeForConnection = null;
+                        }
+                    }
+                });
+
                 canvas.appendChild(card);
                 nodeMap.set(node.id, card);
 
@@ -1259,6 +1456,9 @@
         // New Map button
         document.getElementById('newMapBtn').addEventListener('click', createNewMap);
 
+        // Connect button
+        document.getElementById('connectBtn').addEventListener('click', toggleConnectionMode);
+
         // Add root
         document.getElementById('addRootBtn').addEventListener('click', () => {
             const newName = prompt('Enter new root name:');
@@ -1271,7 +1471,8 @@
                 color: '#3b6bb0',
                 x: 600,
                 y: 150,
-                children: [oldRoot]
+                children: [oldRoot],
+                connections: mindmap.connections || []
             };
             
             collapsedNodes.clear();
