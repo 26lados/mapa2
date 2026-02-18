@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa-UMP</title>
+    <title>Mapa UMP-TR</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -190,6 +190,16 @@
         .btn.break-btn.active {
             background: #c0392b;
             animation: pulse 1.5s infinite;
+        }
+
+        .btn.load-btn {
+            background: #27ae60;
+            color: white;
+        }
+        .btn.load-btn i { color: white; }
+
+        .dark-mode .btn.load-btn {
+            background: #229954;
         }
 
         @keyframes pulse {
@@ -556,6 +566,11 @@
             color: #e0e5f0;
         }
 
+        /* File input styling */
+        .file-input-hidden {
+            display: none;
+        }
+
         .modal-overlay {
             position: fixed;
             top:0; left:0; width:100%; height:100%;
@@ -603,6 +618,14 @@
             color: #e0e5f0;
         }
         .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+
+        .file-info {
+            padding: 10px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 30px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -612,6 +635,7 @@
         <div class="action-buttons">
             <button class="btn theme-toggle" id="themeToggle"><i class="fas fa-moon"></i> Dark</button>
             <button class="btn new-map-btn" id="newMapBtn"><i class="fas fa-file"></i> New Map</button>
+            <button class="btn load-btn" id="loadMapBtn"><i class="fas fa-folder-open"></i> Load Map</button>
             <button class="btn connect-btn" id="connectBtn"><i class="fas fa-link"></i> Connect</button>
             <button class="btn break-btn" id="breakBtn"><i class="fas fa-unlink"></i> Break</button>
             <button class="btn" id="addRootBtn"><i class="fas fa-plus-circle"></i> New root</button>
@@ -655,6 +679,9 @@
         </div>
     </div>
 </div>
+
+<!-- Hidden file input -->
+<input type="file" id="fileInput" class="file-input-hidden" accept=".json,application/json">
 
 <!-- Right-click Context Menu -->
 <div class="context-menu" id="contextMenu">
@@ -737,6 +764,23 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="loadModal">
+    <div class="modal-card">
+        <h2><i class="fas fa-folder-open" style="color:#27ae60;"></i> Load Map</h2>
+        <div class="file-info" id="fileInfo">
+            Select a JSON file to load
+        </div>
+        <div class="input-group">
+            <label>Or paste JSON directly:</label>
+            <textarea id="loadData" rows="8" placeholder='Paste your mind map JSON here...' style="font-family: monospace; font-size: 0.85rem;"></textarea>
+        </div>
+        <div class="modal-actions">
+            <button class="btn" id="cancelLoad">Cancel</button>
+            <button class="btn load-btn" id="confirmLoad">Load Map</button>
+        </div>
+    </div>
+</div>
+
 <script>
     (function() {
         // ==================== DATA MODEL ====================
@@ -788,6 +832,69 @@
 
         // Theme
         let darkMode = localStorage.getItem('canvas-dark') === 'true';
+
+        // ==================== LOAD MAP FUNCTIONALITY ====================
+        const loadMapFromFile = (file) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target.result;
+                    const loadedMap = JSON.parse(content);
+                    
+                    // Validate basic structure
+                    if (!loadedMap.id || !loadedMap.name || !loadedMap.children) {
+                        throw new Error('Invalid mind map format');
+                    }
+                    
+                    // Ensure connections array exists
+                    if (!loadedMap.connections) {
+                        loadedMap.connections = [];
+                    }
+                    
+                    mindmap = loadedMap;
+                    collapsedNodes.clear();
+                    panX = 0;
+                    panY = 0;
+                    currentScale = 1.0;
+                    refresh();
+                    
+                    document.getElementById('loadModal').classList.remove('show');
+                    alert('Map loaded successfully!');
+                } catch (error) {
+                    alert('Error loading file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        const loadMapFromJson = (jsonString) => {
+            try {
+                const loadedMap = JSON.parse(jsonString);
+                
+                // Validate basic structure
+                if (!loadedMap.id || !loadedMap.name || !loadedMap.children) {
+                    throw new Error('Invalid mind map format');
+                }
+                
+                // Ensure connections array exists
+                if (!loadedMap.connections) {
+                    loadedMap.connections = [];
+                }
+                
+                mindmap = loadedMap;
+                collapsedNodes.clear();
+                panX = 0;
+                panY = 0;
+                currentScale = 1.0;
+                refresh();
+                
+                document.getElementById('loadModal').classList.remove('show');
+                document.getElementById('loadData').value = ''; // Clear textarea
+                alert('Map loaded successfully!');
+            } catch (error) {
+                alert('Error parsing JSON: ' + error.message);
+            }
+        };
 
         // ==================== CONNECTION MODE ====================
         const toggleConnectionMode = () => {
@@ -1218,7 +1325,8 @@
             renderNode(mindmap);
         };
 
-        // ==================== BRANCH RENDERING ====================
+        // ==================== FIXED BRANCH RENDERING ====================
+        // Branches now persist when nodes are collapsed
         const renderBranches = () => {
             const container = document.getElementById('branchContainer');
             if (!container) return;
@@ -1237,11 +1345,9 @@
             };
             traverse(null, mindmap);
 
-            // Draw tree branches (parent-child connections)
+            // Draw ALL tree branches regardless of collapse state
+            // This ensures branches persist even when nodes are collapsed
             for (const node of getAllNodes()) {
-                // Skip if node is collapsed or has no parent
-                if (collapsedNodes.has(node.id)) continue;
-                
                 const parent = parentMap.get(node.id);
                 if (!parent) continue;
                 
@@ -1252,15 +1358,16 @@
 
                 // Get positions
                 const parentLeft = parseFloat(parentEl.style.left) || parent.x;
-                const parentTop = parseFloat(parentEl.style.top) || parent.y;
+                const parentTop = parseFloat(parentEl.style.left) || parent.y;
                 const childLeft = parseFloat(childEl.style.left) || node.x;
                 const childTop = parseFloat(childEl.style.top) || node.y;
 
                 const parentWidth = parentEl.offsetWidth;
                 const parentHeight = parentEl.offsetHeight;
                 const childWidth = childEl.offsetWidth;
+                const childHeight = childEl.offsetHeight;
 
-                // Calculate connection points
+                // Calculate connection points - connect from bottom of parent to top of child
                 const startX = parentLeft + parentWidth / 2;
                 const startY = parentTop + parentHeight;
                 const endX = childLeft + childWidth / 2;
@@ -1291,7 +1398,7 @@
                 container.appendChild(branch);
             }
 
-            // Draw custom connections
+            // Draw custom connections (these should always be visible)
             if (mindmap.connections) {
                 for (const conn of mindmap.connections) {
                     const fromEl = nodeMap.get(conn.from);
@@ -1515,10 +1622,48 @@
                 // Setup draggable
                 setupDraggable(card, node);
 
-                // Add children if not collapsed
-                if (!collapsedNodes.has(node.id) && node.children) {
-                    node.children.forEach(child => addNode(child));
+                // Add children if not collapsed - but even if collapsed, we still need to add them to nodeMap
+                // so branches can be drawn, but we don't render them visually
+                if (node.children) {
+                    node.children.forEach(child => {
+                        // Always add child nodes to the map, even if collapsed
+                        // This ensures branches can be drawn
+                        addNode(child);
+                        
+                        // If collapsed, we'll hide the card later
+                        if (collapsedNodes.has(node.id)) {
+                            const childCard = nodeMap.get(child.id);
+                            if (childCard) {
+                                childCard.style.display = 'none';
+                            }
+                        }
+                    });
                 }
+
+                // Hide card if parent is collapsed
+                if (node !== mindmap) {
+                    const parent = findParent(mindmap, node.id);
+                    if (parent && collapsedNodes.has(parent.id)) {
+                        card.style.display = 'none';
+                    } else {
+                        card.style.display = 'block';
+                    }
+                }
+            };
+
+            // Helper to find parent of a node
+            const findParent = (root, childId) => {
+                const search = (node, parent) => {
+                    if (node.children) {
+                        for (const child of node.children) {
+                            if (child.id === childId) return parent;
+                            const found = search(child, node);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                return search(root, null);
             };
 
             addNode(mindmap);
@@ -1629,6 +1774,38 @@
 
         // New Map button
         document.getElementById('newMapBtn').addEventListener('click', createNewMap);
+
+        // Load Map button
+        document.getElementById('loadMapBtn').addEventListener('click', () => {
+            document.getElementById('loadData').value = '';
+            document.getElementById('fileInfo').innerHTML = 'Select a JSON file to load or paste below';
+            document.getElementById('loadModal').classList.add('show');
+        });
+
+        // File input handling
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                loadMapFromFile(file);
+            }
+            fileInput.value = ''; // Reset so same file can be chosen again
+        });
+
+        // Load modal buttons
+        document.getElementById('cancelLoad').addEventListener('click', () => {
+            document.getElementById('loadModal').classList.remove('show');
+        });
+
+        document.getElementById('confirmLoad').addEventListener('click', () => {
+            const jsonText = document.getElementById('loadData').value.trim();
+            if (jsonText) {
+                loadMapFromJson(jsonText);
+            } else {
+                // Trigger file input
+                fileInput.click();
+            }
+        });
 
         // Connect button
         document.getElementById('connectBtn').addEventListener('click', toggleConnectionMode);
@@ -1826,7 +2003,7 @@
         });
 
         // Close modals on overlay click
-        ['editModal', 'colorModal', 'shareModal', 'breakConnectionsModal'].forEach(id => {
+        ['editModal', 'colorModal', 'shareModal', 'breakConnectionsModal', 'loadModal'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
                 if (e.target.classList.contains('modal-overlay')) {
                     document.getElementById(id).classList.remove('show');
