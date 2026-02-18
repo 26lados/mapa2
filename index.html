@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>canvas · connect boxes</title>
+    <title>canvas · connect & break</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -174,6 +174,21 @@
 
         .btn.connect-btn.active {
             background: #e67e22;
+            animation: pulse 1.5s infinite;
+        }
+
+        .btn.break-btn {
+            background: #e74c3c;
+            color: white;
+        }
+        .btn.break-btn i { color: white; }
+
+        .dark-mode .btn.break-btn {
+            background: #c0392b;
+        }
+
+        .btn.break-btn.active {
+            background: #c0392b;
             animation: pulse 1.5s infinite;
         }
 
@@ -370,6 +385,11 @@
             box-shadow: 0 0 15px rgba(230, 126, 34, 0.5);
         }
 
+        .node-card.selected-for-breaking {
+            border: 3px solid #e74c3c;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+        }
+
         .node-card .drag-handle {
             position: absolute;
             top: 8px;
@@ -390,7 +410,7 @@
             backdrop-filter: blur(10px);
             border-radius: 24px;
             padding: 8px 0;
-            min-width: 200px;
+            min-width: 220px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             border: 1px solid rgba(255,255,255,0.8);
             z-index: 10000;
@@ -433,6 +453,14 @@
 
         .dark-mode .context-menu-item i {
             color: #6d9eff;
+        }
+
+        .context-menu-item.delete-connection {
+            color: #e74c3c;
+        }
+
+        .context-menu-item.delete-connection i {
+            color: #e74c3c;
         }
 
         .context-menu-divider {
@@ -584,7 +612,8 @@
         <div class="action-buttons">
             <button class="btn theme-toggle" id="themeToggle"><i class="fas fa-moon"></i> Dark</button>
             <button class="btn new-map-btn" id="newMapBtn"><i class="fas fa-file"></i> New Map</button>
-            <button class="btn connect-btn" id="connectBtn"><i class="fas fa-link"></i> Connect Boxes</button>
+            <button class="btn connect-btn" id="connectBtn"><i class="fas fa-link"></i> Connect</button>
+            <button class="btn break-btn" id="breakBtn"><i class="fas fa-unlink"></i> Break</button>
             <button class="btn" id="addRootBtn"><i class="fas fa-plus-circle"></i> New root</button>
             <button class="btn" id="addChildBtn"><i class="fas fa-sitemap"></i> Add child</button>
             <button class="btn" id="editNodeBtn"><i class="fas fa-pen-fancy"></i> Edit</button>
@@ -645,6 +674,10 @@
     <div class="context-menu-item" id="contextDelete">
         <i class="fas fa-trash"></i> Delete Node
     </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" id="contextBreakConnection">
+        <i class="fas fa-unlink"></i> Break Connections
+    </div>
 </div>
 
 <!-- modals -->
@@ -690,6 +723,20 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="breakConnectionsModal">
+    <div class="modal-card">
+        <h2><i class="fas fa-unlink" style="color:#e74c3c;"></i> Break Connections</h2>
+        <p style="margin-bottom: 20px; color: #666;">Select which connection to break:</p>
+        <div id="connectionsList" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+            <!-- Connections will be listed here -->
+        </div>
+        <div class="modal-actions">
+            <button class="btn" id="cancelBreak">Cancel</button>
+            <button class="btn share-btn" id="breakSelectedBtn" style="background: #e74c3c;">Break Selected</button>
+        </div>
+    </div>
+</div>
+
 <script>
     (function() {
         // ==================== DATA MODEL ====================
@@ -730,7 +777,9 @@
 
         // Connection mode
         let connectionMode = false;
+        let breakMode = false;
         let selectedNodeForConnection = null;
+        let selectedNodeForBreaking = null;
 
         // Modal targets
         let currentNodeToEdit = null;
@@ -743,26 +792,53 @@
         // ==================== CONNECTION MODE ====================
         const toggleConnectionMode = () => {
             connectionMode = !connectionMode;
+            breakMode = false; // Turn off break mode
+            
             const connectBtn = document.getElementById('connectBtn');
+            const breakBtn = document.getElementById('breakBtn');
             
             if (connectionMode) {
                 connectBtn.classList.add('active');
-                connectBtn.innerHTML = '<i class="fas fa-link"></i> Cancel Connection';
+                connectBtn.innerHTML = '<i class="fas fa-link"></i> Cancel';
+                breakBtn.classList.remove('active');
+                breakBtn.innerHTML = '<i class="fas fa-unlink"></i> Break';
+                
                 selectedNodeForConnection = null;
+                selectedNodeForBreaking = null;
                 
                 // Remove any selected highlights
-                document.querySelectorAll('.node-card.selected-for-connection').forEach(el => {
-                    el.classList.remove('selected-for-connection');
+                document.querySelectorAll('.node-card.selected-for-connection, .node-card.selected-for-breaking').forEach(el => {
+                    el.classList.remove('selected-for-connection', 'selected-for-breaking');
                 });
             } else {
                 connectBtn.classList.remove('active');
-                connectBtn.innerHTML = '<i class="fas fa-link"></i> Connect Boxes';
+                connectBtn.innerHTML = '<i class="fas fa-link"></i> Connect';
+            }
+        };
+
+        const toggleBreakMode = () => {
+            breakMode = !breakMode;
+            connectionMode = false; // Turn off connection mode
+            
+            const connectBtn = document.getElementById('connectBtn');
+            const breakBtn = document.getElementById('breakBtn');
+            
+            if (breakMode) {
+                breakBtn.classList.add('active');
+                breakBtn.innerHTML = '<i class="fas fa-unlink"></i> Cancel';
+                connectBtn.classList.remove('active');
+                connectBtn.innerHTML = '<i class="fas fa-link"></i> Connect';
+                
+                selectedNodeForBreaking = null;
                 selectedNodeForConnection = null;
                 
                 // Remove any selected highlights
-                document.querySelectorAll('.node-card.selected-for-connection').forEach(el => {
-                    el.classList.remove('selected-for-connection');
+                document.querySelectorAll('.node-card.selected-for-connection, .node-card.selected-for-breaking').forEach(el => {
+                    el.classList.remove('selected-for-connection', 'selected-for-breaking');
                 });
+            } else {
+                breakBtn.classList.remove('active');
+                breakBtn.innerHTML = '<i class="fas fa-unlink"></i> Break';
             }
         };
 
@@ -797,18 +873,76 @@
             return true;
         };
 
-        const removeConnection = (fromId, toId) => {
+        const breakConnection = (nodeId) => {
             if (!mindmap.connections) return false;
             
-            const index = mindmap.connections.findIndex(conn => 
-                (conn.from === fromId && conn.to === toId) || (conn.from === toId && conn.to === fromId)
+            // Find all connections involving this node
+            const connectionsToBreak = mindmap.connections.filter(conn => 
+                conn.from === nodeId || conn.to === nodeId
             );
-            
-            if (index !== -1) {
-                mindmap.connections.splice(index, 1);
-                return true;
+
+            if (connectionsToBreak.length === 0) {
+                alert("This node has no connections to break");
+                return false;
             }
-            return false;
+
+            if (connectionsToBreak.length === 1) {
+                // Just break the single connection
+                const conn = connectionsToBreak[0];
+                const index = mindmap.connections.findIndex(c => 
+                    (c.from === conn.from && c.to === conn.to)
+                );
+                mindmap.connections.splice(index, 1);
+                alert("Connection broken");
+                return true;
+            } else {
+                // Multiple connections - show selection modal
+                showBreakConnectionsModal(nodeId);
+                return false;
+            }
+        };
+
+        const showBreakConnectionsModal = (nodeId) => {
+            const modal = document.getElementById('breakConnectionsModal');
+            const listContainer = document.getElementById('connectionsList');
+            
+            // Get node names
+            const connections = mindmap.connections.filter(conn => 
+                conn.from === nodeId || conn.to === nodeId
+            );
+
+            listContainer.innerHTML = '';
+            
+            connections.forEach((conn, index) => {
+                const otherId = conn.from === nodeId ? conn.to : conn.from;
+                const otherNode = findNodeById(mindmap, otherId);
+                
+                if (otherNode) {
+                    const div = document.createElement('div');
+                    div.style.padding = '10px';
+                    div.style.margin = '5px 0';
+                    div.style.background = darkMode ? '#2a2f3c' : '#f0f5ff';
+                    div.style.borderRadius = '30px';
+                    div.style.cursor = 'pointer';
+                    div.style.display = 'flex';
+                    div.style.alignItems = 'center';
+                    div.style.gap = '10px';
+                    
+                    div.innerHTML = `
+                        <input type="checkbox" id="conn_${index}" value="${index}" style="width: 20px; height: 20px;">
+                        <label for="conn_${index}" style="cursor: pointer; flex:1;">
+                            <i class="fas fa-link" style="color: #e67e22; margin-right: 8px;"></i>
+                            ${findNodeById(mindmap, nodeId).name} ↔ ${otherNode.name}
+                        </label>
+                    `;
+                    
+                    listContainer.appendChild(div);
+                }
+            });
+
+            // Store nodeId for later use
+            currentNodeToEdit = nodeId; // Reusing this for the modal
+            modal.classList.add('show');
         };
 
         // ==================== CONTEXT MENU ====================
@@ -853,6 +987,9 @@
                     if (connectionMode) {
                         toggleConnectionMode();
                     }
+                    if (breakMode) {
+                        toggleBreakMode();
+                    }
                 }
             });
 
@@ -888,6 +1025,13 @@
             document.getElementById('contextDelete').addEventListener('click', () => {
                 if (activeNodeId) {
                     deleteNode(activeNodeId);
+                    contextMenu.classList.remove('show');
+                }
+            });
+
+            document.getElementById('contextBreakConnection').addEventListener('click', () => {
+                if (activeNodeId) {
+                    breakConnection(activeNodeId);
                     contextMenu.classList.remove('show');
                 }
             });
@@ -1312,7 +1456,7 @@
                     editNodeById(node.id);
                 });
 
-                // Handle click for connection mode
+                // Handle click for connection/break mode
                 card.addEventListener('click', (e) => {
                     if (connectionMode) {
                         e.stopPropagation();
@@ -1331,6 +1475,36 @@
                                 renderBranches();
                             }
                             selectedNodeForConnection = null;
+                        }
+                    } else if (breakMode) {
+                        e.stopPropagation();
+                        
+                        if (!selectedNodeForBreaking) {
+                            // First node selected for breaking
+                            selectedNodeForBreaking = node.id;
+                            card.classList.add('selected-for-breaking');
+                        } else {
+                            // Break connection between these two nodes
+                            if (mindmap.connections) {
+                                const index = mindmap.connections.findIndex(conn => 
+                                    (conn.from === selectedNodeForBreaking && conn.to === node.id) ||
+                                    (conn.from === node.id && conn.to === selectedNodeForBreaking)
+                                );
+                                
+                                if (index !== -1) {
+                                    mindmap.connections.splice(index, 1);
+                                    renderBranches();
+                                    alert("Connection broken");
+                                } else {
+                                    alert("No direct connection between these nodes");
+                                }
+                            }
+                            
+                            // Remove highlights
+                            document.querySelectorAll('.node-card.selected-for-breaking').forEach(el => {
+                                el.classList.remove('selected-for-breaking');
+                            });
+                            selectedNodeForBreaking = null;
                         }
                     }
                 });
@@ -1458,6 +1632,9 @@
 
         // Connect button
         document.getElementById('connectBtn').addEventListener('click', toggleConnectionMode);
+
+        // Break button
+        document.getElementById('breakBtn').addEventListener('click', toggleBreakMode);
 
         // Add root
         document.getElementById('addRootBtn').addEventListener('click', () => {
@@ -1622,8 +1799,34 @@
             });
         });
 
+        // Break connections modal buttons
+        document.getElementById('cancelBreak').addEventListener('click', () => {
+            document.getElementById('breakConnectionsModal').classList.remove('show');
+        });
+
+        document.getElementById('breakSelectedBtn').addEventListener('click', () => {
+            const checkboxes = document.querySelectorAll('#connectionsList input[type="checkbox"]:checked');
+            const indices = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            if (indices.length === 0) {
+                alert('Select at least one connection to break');
+                return;
+            }
+
+            // Sort indices in descending order to remove from end first
+            indices.sort((a, b) => b - a);
+            
+            indices.forEach(index => {
+                mindmap.connections.splice(index, 1);
+            });
+
+            document.getElementById('breakConnectionsModal').classList.remove('show');
+            refresh();
+            alert(`${indices.length} connection(s) broken`);
+        });
+
         // Close modals on overlay click
-        ['editModal', 'colorModal', 'shareModal'].forEach(id => {
+        ['editModal', 'colorModal', 'shareModal', 'breakConnectionsModal'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
                 if (e.target.classList.contains('modal-overlay')) {
                     document.getElementById(id).classList.remove('show');
