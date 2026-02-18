@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa UMP-TR</title>
+    <title>Mapa</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -317,7 +317,7 @@
             transform-origin: 0 0;
         }
 
-        /* Branch container for both tree branches and custom connections */
+        /* Branch container */
         .branch-container {
             position: absolute;
             top: 0;
@@ -336,6 +336,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border-radius: 3px;
             z-index: 50;
+            transition: opacity 0.2s;
         }
 
         .dark-mode .branch {
@@ -370,7 +371,7 @@
             text-align: center;
             cursor: grab;
             user-select: none;
-            transition: box-shadow 0.1s, background 0.3s;
+            transition: box-shadow 0.1s, background 0.3s, opacity 0.2s;
             font-weight: 500;
             color: #11223b;
             will-change: left, top;
@@ -398,6 +399,10 @@
         .node-card.selected-for-breaking {
             border: 3px solid #e74c3c;
             box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+        }
+
+        .node-card.collapsed {
+            opacity: 0.8;
         }
 
         .node-card .drag-handle {
@@ -665,7 +670,7 @@
         <div class="mindmap-area" id="mindmapArea">
             <div id="viewport">
                 <div id="mindmapCanvas">
-                    <!-- Branch container - stays separate from nodes -->
+                    <!-- Branch container -->
                     <div class="branch-container" id="branchContainer"></div>
                     <!-- Nodes will be inserted here -->
                 </div>
@@ -798,14 +803,13 @@
                 ]},
                 { id: 'child3', name: 'Notes', color: '#9b59b6', x: 500, y: 520, children: [] }
             ],
-            // Custom connections between nodes
             connections: []
         };
 
         // State
         let collapsedNodes = new Set();
         let nodeMap = new Map(); // id -> DOM element
-        let dragOffsets = new Map(); // Store drag offsets per node
+        let dragOffsets = new Map();
         
         // Transform state
         let currentScale = 1.0;
@@ -828,7 +832,6 @@
         // Modal targets
         let currentNodeToEdit = null;
         let currentNodeToColor = null;
-        let currentNodeToDelete = null;
 
         // Theme
         let darkMode = localStorage.getItem('canvas-dark') === 'true';
@@ -841,12 +844,10 @@
                     const content = e.target.result;
                     const loadedMap = JSON.parse(content);
                     
-                    // Validate basic structure
                     if (!loadedMap.id || !loadedMap.name || !loadedMap.children) {
                         throw new Error('Invalid mind map format');
                     }
                     
-                    // Ensure connections array exists
                     if (!loadedMap.connections) {
                         loadedMap.connections = [];
                     }
@@ -871,12 +872,10 @@
             try {
                 const loadedMap = JSON.parse(jsonString);
                 
-                // Validate basic structure
                 if (!loadedMap.id || !loadedMap.name || !loadedMap.children) {
                     throw new Error('Invalid mind map format');
                 }
                 
-                // Ensure connections array exists
                 if (!loadedMap.connections) {
                     loadedMap.connections = [];
                 }
@@ -889,7 +888,7 @@
                 refresh();
                 
                 document.getElementById('loadModal').classList.remove('show');
-                document.getElementById('loadData').value = ''; // Clear textarea
+                document.getElementById('loadData').value = '';
                 alert('Map loaded successfully!');
             } catch (error) {
                 alert('Error parsing JSON: ' + error.message);
@@ -899,7 +898,7 @@
         // ==================== CONNECTION MODE ====================
         const toggleConnectionMode = () => {
             connectionMode = !connectionMode;
-            breakMode = false; // Turn off break mode
+            breakMode = false;
             
             const connectBtn = document.getElementById('connectBtn');
             const breakBtn = document.getElementById('breakBtn');
@@ -913,7 +912,6 @@
                 selectedNodeForConnection = null;
                 selectedNodeForBreaking = null;
                 
-                // Remove any selected highlights
                 document.querySelectorAll('.node-card.selected-for-connection, .node-card.selected-for-breaking').forEach(el => {
                     el.classList.remove('selected-for-connection', 'selected-for-breaking');
                 });
@@ -925,7 +923,7 @@
 
         const toggleBreakMode = () => {
             breakMode = !breakMode;
-            connectionMode = false; // Turn off connection mode
+            connectionMode = false;
             
             const connectBtn = document.getElementById('connectBtn');
             const breakBtn = document.getElementById('breakBtn');
@@ -939,7 +937,6 @@
                 selectedNodeForBreaking = null;
                 selectedNodeForConnection = null;
                 
-                // Remove any selected highlights
                 document.querySelectorAll('.node-card.selected-for-connection, .node-card.selected-for-breaking').forEach(el => {
                     el.classList.remove('selected-for-connection', 'selected-for-breaking');
                 });
@@ -955,12 +952,10 @@
                 return false;
             }
 
-            // Initialize connections array if it doesn't exist
             if (!mindmap.connections) {
                 mindmap.connections = [];
             }
 
-            // Check if connection already exists
             const exists = mindmap.connections.some(conn => 
                 (conn.from === fromId && conn.to === toId) || (conn.from === toId && conn.to === fromId)
             );
@@ -970,7 +965,6 @@
                 return false;
             }
 
-            // Add the connection
             mindmap.connections.push({
                 from: fromId,
                 to: toId,
@@ -983,7 +977,6 @@
         const breakConnection = (nodeId) => {
             if (!mindmap.connections) return false;
             
-            // Find all connections involving this node
             const connectionsToBreak = mindmap.connections.filter(conn => 
                 conn.from === nodeId || conn.to === nodeId
             );
@@ -994,7 +987,6 @@
             }
 
             if (connectionsToBreak.length === 1) {
-                // Just break the single connection
                 const conn = connectionsToBreak[0];
                 const index = mindmap.connections.findIndex(c => 
                     (c.from === conn.from && c.to === conn.to)
@@ -1003,7 +995,6 @@
                 alert("Connection broken");
                 return true;
             } else {
-                // Multiple connections - show selection modal
                 showBreakConnectionsModal(nodeId);
                 return false;
             }
@@ -1013,7 +1004,6 @@
             const modal = document.getElementById('breakConnectionsModal');
             const listContainer = document.getElementById('connectionsList');
             
-            // Get node names
             const connections = mindmap.connections.filter(conn => 
                 conn.from === nodeId || conn.to === nodeId
             );
@@ -1030,7 +1020,6 @@
                     div.style.margin = '5px 0';
                     div.style.background = darkMode ? '#2a2f3c' : '#f0f5ff';
                     div.style.borderRadius = '30px';
-                    div.style.cursor = 'pointer';
                     div.style.display = 'flex';
                     div.style.alignItems = 'center';
                     div.style.gap = '10px';
@@ -1047,8 +1036,7 @@
                 }
             });
 
-            // Store nodeId for later use
-            currentNodeToEdit = nodeId; // Reusing this for the modal
+            currentNodeToEdit = nodeId;
             modal.classList.add('show');
         };
 
@@ -1056,51 +1044,40 @@
         const contextMenu = document.getElementById('contextMenu');
         let activeNodeId = null;
 
-        // Show context menu on right-click
         const setupContextMenu = () => {
             const canvas = document.getElementById('mindmapCanvas');
             
             canvas.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
                 
-                // Find if we clicked on a node
                 const nodeCard = e.target.closest('.node-card');
                 
                 if (nodeCard) {
                     activeNodeId = nodeCard.getAttribute('data-id');
                     
-                    // Position menu at mouse
                     contextMenu.style.left = e.clientX + 'px';
                     contextMenu.style.top = e.clientY + 'px';
                     contextMenu.classList.add('show');
                 } else {
-                    // Clicked on background - hide menu
                     contextMenu.classList.remove('show');
                     activeNodeId = null;
                 }
             });
 
-            // Hide menu on click elsewhere
             document.addEventListener('click', (e) => {
                 if (!contextMenu.contains(e.target)) {
                     contextMenu.classList.remove('show');
                 }
             });
 
-            // Hide on escape
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     contextMenu.classList.remove('show');
-                    if (connectionMode) {
-                        toggleConnectionMode();
-                    }
-                    if (breakMode) {
-                        toggleBreakMode();
-                    }
+                    if (connectionMode) toggleConnectionMode();
+                    if (breakMode) toggleBreakMode();
                 }
             });
 
-            // Context menu actions
             document.getElementById('contextAddChild').addEventListener('click', () => {
                 if (activeNodeId) {
                     addChildToNode(activeNodeId);
@@ -1248,7 +1225,6 @@
             };
 
             if (confirm('Delete this node and all its children?')) {
-                // Also remove any connections involving this node
                 if (mindmap.connections) {
                     mindmap.connections = mindmap.connections.filter(conn => 
                         conn.from !== nodeId && conn.to !== nodeId
@@ -1286,7 +1262,7 @@
             return nodes;
         };
 
-        // ==================== RENDERING ====================
+        // ==================== SIMPLE RENDERING ====================
         const renderTreeView = () => {
             const container = document.getElementById('treeView');
             if (!container) return;
@@ -1325,15 +1301,15 @@
             renderNode(mindmap);
         };
 
-        // ==================== FIXED BRANCH RENDERING ====================
-        // Branches now persist when nodes are collapsed
+        // ==================== STABLE BRANCH RENDERING ====================
+        // Only draw branches for visible nodes (not collapsed)
         const renderBranches = () => {
             const container = document.getElementById('branchContainer');
             if (!container) return;
             
             container.innerHTML = '';
             
-            // Build parent-child relationships for tree branches
+            // Build parent-child relationships
             const parentMap = new Map();
             const traverse = (parent, node) => {
                 if (parent) {
@@ -1345,9 +1321,22 @@
             };
             traverse(null, mindmap);
 
-            // Draw ALL tree branches regardless of collapse state
-            // This ensures branches persist even when nodes are collapsed
+            // Draw branches ONLY for visible nodes (not collapsed and whose ancestors aren't collapsed)
             for (const node of getAllNodes()) {
+                // Check if node or any ancestor is collapsed
+                let shouldHide = false;
+                let checkNode = node;
+                while (checkNode && checkNode.id !== mindmap.id) {
+                    const parent = parentMap.get(checkNode.id);
+                    if (parent && collapsedNodes.has(parent.id)) {
+                        shouldHide = true;
+                        break;
+                    }
+                    checkNode = parent;
+                }
+                
+                if (shouldHide) continue;
+                
                 const parent = parentMap.get(node.id);
                 if (!parent) continue;
                 
@@ -1358,32 +1347,28 @@
 
                 // Get positions
                 const parentLeft = parseFloat(parentEl.style.left) || parent.x;
-                const parentTop = parseFloat(parentEl.style.left) || parent.y;
+                const parentTop = parseFloat(parentEl.style.top) || parent.y;
                 const childLeft = parseFloat(childEl.style.left) || node.x;
                 const childTop = parseFloat(childEl.style.top) || node.y;
 
                 const parentWidth = parentEl.offsetWidth;
                 const parentHeight = parentEl.offsetHeight;
                 const childWidth = childEl.offsetWidth;
-                const childHeight = childEl.offsetHeight;
 
-                // Calculate connection points - connect from bottom of parent to top of child
+                // Calculate connection points
                 const startX = parentLeft + parentWidth / 2;
                 const startY = parentTop + parentHeight;
                 const endX = childLeft + childWidth / 2;
                 const endY = childTop;
 
-                // Calculate distance and angle
                 const dx = endX - startX;
                 const dy = endY - startY;
                 const length = Math.sqrt(dx * dx + dy * dy);
                 
-                // Only draw if length is reasonable
                 if (length < 5) continue;
                 
                 const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
-                // Create branch element
                 const branch = document.createElement('div');
                 branch.className = 'branch tree-branch';
                 branch.style.left = startX + 'px';
@@ -1391,20 +1376,49 @@
                 branch.style.width = length + 'px';
                 branch.style.transform = `rotate(${angle}deg)`;
                 
-                // Set color based on child node
                 const color = node.color || '#94a9c9';
                 branch.style.background = `linear-gradient(90deg, ${color}, ${lightenColor(color, 30)})`;
                 
                 container.appendChild(branch);
             }
 
-            // Draw custom connections (these should always be visible)
+            // Draw custom connections (always visible if both nodes are visible)
             if (mindmap.connections) {
                 for (const conn of mindmap.connections) {
                     const fromEl = nodeMap.get(conn.from);
                     const toEl = nodeMap.get(conn.to);
                     
                     if (!fromEl || !toEl) continue;
+
+                    // Check if either node is hidden due to collapse
+                    const fromNode = findNodeById(mindmap, conn.from);
+                    const toNode = findNodeById(mindmap, conn.to);
+                    
+                    let fromHidden = false;
+                    let toHidden = false;
+                    
+                    // Check ancestors for collapse
+                    let checkNode = fromNode;
+                    while (checkNode && checkNode.id !== mindmap.id) {
+                        const parent = parentMap.get(checkNode.id);
+                        if (parent && collapsedNodes.has(parent.id)) {
+                            fromHidden = true;
+                            break;
+                        }
+                        checkNode = parent;
+                    }
+                    
+                    checkNode = toNode;
+                    while (checkNode && checkNode.id !== mindmap.id) {
+                        const parent = parentMap.get(checkNode.id);
+                        if (parent && collapsedNodes.has(parent.id)) {
+                            toHidden = true;
+                            break;
+                        }
+                        checkNode = parent;
+                    }
+                    
+                    if (fromHidden || toHidden) continue;
 
                     const fromLeft = parseFloat(fromEl.style.left) || 0;
                     const fromTop = parseFloat(fromEl.style.top) || 0;
@@ -1416,7 +1430,6 @@
                     const toWidth = toEl.offsetWidth;
                     const toHeight = toEl.offsetHeight;
 
-                    // Connect from center of nodes
                     const startX = fromLeft + fromWidth / 2;
                     const startY = fromTop + fromHeight / 2;
                     const endX = toLeft + toWidth / 2;
@@ -1443,11 +1456,9 @@
             }
         };
 
-        // Helper to lighten colors
         const lightenColor = (color, percent) => {
             if (!color) return '#b7c9e5';
             
-            // Handle hex colors
             if (color.startsWith('#')) {
                 const num = parseInt(color.slice(1), 16);
                 const r = Math.min(255, (num >> 16) + percent);
@@ -1474,13 +1485,11 @@
                 autoScroll: false,
                 listeners: {
                     start(event) {
-                        // Stop panning while dragging
                         isPanning = false;
                         
                         const target = event.target;
                         const rect = target.getBoundingClientRect();
                         
-                        // Store offset from mouse to element corner
                         dragOffsets.set(target.id, {
                             x: event.clientX - rect.left,
                             y: event.clientY - rect.top
@@ -1495,22 +1504,18 @@
                         const viewport = document.getElementById('viewport');
                         const viewportRect = viewport.getBoundingClientRect();
 
-                        // Calculate screen position
                         let screenX = event.clientX - offset.x;
                         let screenY = event.clientY - offset.y;
 
-                        // Convert to canvas coordinates
                         const viewportX = screenX - viewportRect.left;
                         const viewportY = screenY - viewportRect.top;
 
                         const canvasX = (viewportX - panX) / currentScale;
                         const canvasY = (viewportY - panY) / currentScale;
 
-                        // Update position
                         target.style.left = canvasX + 'px';
                         target.style.top = canvasY + 'px';
 
-                        // Update model
                         const nodeId = target.getAttribute('data-id');
                         const node = findNodeById(mindmap, nodeId);
                         if (node) {
@@ -1518,7 +1523,6 @@
                             node.y = canvasY;
                         }
 
-                        // Redraw branches
                         renderBranches();
                     },
                     
@@ -1533,7 +1537,6 @@
             const canvas = document.getElementById('mindmapCanvas');
             if (!canvas) return;
             
-            // Remove all nodes but keep branch container
             const branchContainer = document.getElementById('branchContainer');
             Array.from(canvas.children).forEach(el => {
                 if (el !== branchContainer) {
@@ -1547,6 +1550,9 @@
             const addNode = (node) => {
                 const card = document.createElement('div');
                 card.className = 'node-card';
+                if (collapsedNodes.has(node.id)) {
+                    card.classList.add('collapsed');
+                }
                 card.id = 'node-' + node.id;
                 card.setAttribute('data-id', node.id);
                 card.style.left = node.x + 'px';
@@ -1557,25 +1563,20 @@
                     : (darkMode ? '#2a2f3c' : 'rgba(255,255,255,0.95)');
                 card.innerHTML = `<div>${node.name}</div><div class="drag-handle"><i class="fas fa-grip-lines"></i></div>`;
 
-                // Double-click edit
                 card.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
                     editNodeById(node.id);
                 });
 
-                // Handle click for connection/break mode
                 card.addEventListener('click', (e) => {
                     if (connectionMode) {
                         e.stopPropagation();
                         
                         if (!selectedNodeForConnection) {
-                            // First node selected
                             selectedNodeForConnection = node.id;
                             card.classList.add('selected-for-connection');
                         } else {
-                            // Second node selected - create connection
                             if (createConnection(selectedNodeForConnection, node.id)) {
-                                // Remove highlight from first node
                                 document.querySelectorAll('.node-card.selected-for-connection').forEach(el => {
                                     el.classList.remove('selected-for-connection');
                                 });
@@ -1587,11 +1588,9 @@
                         e.stopPropagation();
                         
                         if (!selectedNodeForBreaking) {
-                            // First node selected for breaking
                             selectedNodeForBreaking = node.id;
                             card.classList.add('selected-for-breaking');
                         } else {
-                            // Break connection between these two nodes
                             if (mindmap.connections) {
                                 const index = mindmap.connections.findIndex(conn => 
                                     (conn.from === selectedNodeForBreaking && conn.to === node.id) ||
@@ -1607,7 +1606,6 @@
                                 }
                             }
                             
-                            // Remove highlights
                             document.querySelectorAll('.node-card.selected-for-breaking').forEach(el => {
                                 el.classList.remove('selected-for-breaking');
                             });
@@ -1619,51 +1617,11 @@
                 canvas.appendChild(card);
                 nodeMap.set(node.id, card);
 
-                // Setup draggable
                 setupDraggable(card, node);
 
-                // Add children if not collapsed - but even if collapsed, we still need to add them to nodeMap
-                // so branches can be drawn, but we don't render them visually
-                if (node.children) {
-                    node.children.forEach(child => {
-                        // Always add child nodes to the map, even if collapsed
-                        // This ensures branches can be drawn
-                        addNode(child);
-                        
-                        // If collapsed, we'll hide the card later
-                        if (collapsedNodes.has(node.id)) {
-                            const childCard = nodeMap.get(child.id);
-                            if (childCard) {
-                                childCard.style.display = 'none';
-                            }
-                        }
-                    });
+                if (!collapsedNodes.has(node.id) && node.children) {
+                    node.children.forEach(child => addNode(child));
                 }
-
-                // Hide card if parent is collapsed
-                if (node !== mindmap) {
-                    const parent = findParent(mindmap, node.id);
-                    if (parent && collapsedNodes.has(parent.id)) {
-                        card.style.display = 'none';
-                    } else {
-                        card.style.display = 'block';
-                    }
-                }
-            };
-
-            // Helper to find parent of a node
-            const findParent = (root, childId) => {
-                const search = (node, parent) => {
-                    if (node.children) {
-                        for (const child of node.children) {
-                            if (child.id === childId) return parent;
-                            const found = search(child, node);
-                            if (found) return found;
-                        }
-                    }
-                    return null;
-                };
-                return search(root, null);
             };
 
             addNode(mindmap);
@@ -1681,7 +1639,6 @@
             const viewport = document.getElementById('viewport');
             
             viewport.addEventListener('mousedown', (e) => {
-                // Only pan when clicking on background, not on nodes
                 if (e.target === viewport || e.target.id === 'mindmapCanvas' || e.target.classList.contains('branch-container')) {
                     isPanning = true;
                     startPanX = e.clientX - panX;
@@ -1747,7 +1704,6 @@
         };
 
         // ==================== EVENT HANDLERS ====================
-        // Theme toggle
         if (darkMode) {
             document.body.classList.add('dark-mode');
             document.getElementById('appContainer').classList.add('dark-mode');
@@ -1772,27 +1728,23 @@
             renderMindMap();
         });
 
-        // New Map button
         document.getElementById('newMapBtn').addEventListener('click', createNewMap);
 
-        // Load Map button
         document.getElementById('loadMapBtn').addEventListener('click', () => {
             document.getElementById('loadData').value = '';
             document.getElementById('fileInfo').innerHTML = 'Select a JSON file to load or paste below';
             document.getElementById('loadModal').classList.add('show');
         });
 
-        // File input handling
         const fileInput = document.getElementById('fileInput');
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
                 loadMapFromFile(file);
             }
-            fileInput.value = ''; // Reset so same file can be chosen again
+            fileInput.value = '';
         });
 
-        // Load modal buttons
         document.getElementById('cancelLoad').addEventListener('click', () => {
             document.getElementById('loadModal').classList.remove('show');
         });
@@ -1802,18 +1754,13 @@
             if (jsonText) {
                 loadMapFromJson(jsonText);
             } else {
-                // Trigger file input
                 fileInput.click();
             }
         });
 
-        // Connect button
         document.getElementById('connectBtn').addEventListener('click', toggleConnectionMode);
-
-        // Break button
         document.getElementById('breakBtn').addEventListener('click', toggleBreakMode);
 
-        // Add root
         document.getElementById('addRootBtn').addEventListener('click', () => {
             const newName = prompt('Enter new root name:');
             if (!newName) return;
@@ -1833,25 +1780,21 @@
             refresh();
         });
 
-        // Add child (global)
         document.getElementById('addChildBtn').addEventListener('click', () => {
             const targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):') || mindmap.id;
             addChildToNode(targetId);
         });
 
-        // Edit node (global)
         document.getElementById('editNodeBtn').addEventListener('click', () => {
             const id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):') || mindmap.id;
             editNodeById(id);
         });
 
-        // Apply color (global)
         document.getElementById('applyColorBtn').addEventListener('click', () => {
             const id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):') || mindmap.id;
             changeNodeColor(id);
         });
 
-        // Reset layout
         document.getElementById('resetLayoutBtn').addEventListener('click', () => {
             const layout = (node, x, y, xOffset = 180, yOffset = 120) => {
                 node.x = x;
@@ -1868,13 +1811,11 @@
             refresh();
         });
 
-        // Collapse/expand toggle (global)
         document.getElementById('collapseToggleBtn').addEventListener('click', () => {
             const id = prompt('Enter node ID to collapse/expand:');
             if (id) toggleCollapseNode(id);
         });
 
-        // Collapse all
         document.getElementById('collapseAllBtn').addEventListener('click', () => {
             getAllNodes().forEach(node => {
                 if (node.children?.length) {
@@ -1884,13 +1825,11 @@
             refresh();
         });
 
-        // Expand all
         document.getElementById('expandAllBtn').addEventListener('click', () => {
             collapsedNodes.clear();
             refresh();
         });
 
-        // Fullscreen
         document.getElementById('fullscreenBtn').addEventListener('click', () => {
             const container = document.getElementById('appContainer');
             container.classList.toggle('fullscreen');
@@ -1905,12 +1844,10 @@
             setTimeout(renderBranches, 100);
         });
 
-        // Zoom controls
         document.getElementById('zoomIn').addEventListener('click', zoomIn);
         document.getElementById('zoomOut').addEventListener('click', zoomOut);
         document.getElementById('zoomReset').addEventListener('click', zoomReset);
 
-        // Export
         document.getElementById('exportBtn').addEventListener('click', () => {
             const dataStr = JSON.stringify(mindmap, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
@@ -1922,13 +1859,11 @@
             URL.revokeObjectURL(url);
         });
 
-        // Share
         document.getElementById('shareBtn').addEventListener('click', () => {
             document.getElementById('shareData').value = JSON.stringify(mindmap, null, 2);
             document.getElementById('shareModal').classList.add('show');
         });
 
-        // Modal buttons
         document.getElementById('cancelEdit').addEventListener('click', () => {
             document.getElementById('editModal').classList.remove('show');
         });
@@ -1976,7 +1911,6 @@
             });
         });
 
-        // Break connections modal buttons
         document.getElementById('cancelBreak').addEventListener('click', () => {
             document.getElementById('breakConnectionsModal').classList.remove('show');
         });
@@ -1990,7 +1924,6 @@
                 return;
             }
 
-            // Sort indices in descending order to remove from end first
             indices.sort((a, b) => b - a);
             
             indices.forEach(index => {
@@ -2002,7 +1935,6 @@
             alert(`${indices.length} connection(s) broken`);
         });
 
-        // Close modals on overlay click
         ['editModal', 'colorModal', 'shareModal', 'breakConnectionsModal', 'loadModal'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
                 if (e.target.classList.contains('modal-overlay')) {
@@ -2011,15 +1943,11 @@
             });
         });
 
-        // Initialize
         setupPanning();
         setupContextMenu();
         refresh();
 
-        // Redraw branches on window resize
-        window.addEventListener('resize', () => {
-            renderBranches();
-        });
+        window.addEventListener('resize', renderBranches);
     })();
 </script>
 </body>
