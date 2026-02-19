@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Map.2</title>
+    <title>MP.V2</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
@@ -970,6 +970,8 @@
             <div class="burger-menu-buttons">
                 <button class="burger-menu-btn reset-btn" id="burgerResetLayoutBtn"><i class="fas fa-rotate"></i> Reset Layout</button>
                 <button class="burger-menu-btn fullscreen-btn" id="burgerFullscreenBtn"><i class="fas fa-expand"></i> Fullscreen</button>
+                <button class="burger-menu-btn" id="burgerCollapseAllBtn"><i class="fas fa-compress-alt"></i> Collapse All</button>
+                <button class="burger-menu-btn" id="burgerExpandAllBtn"><i class="fas fa-expand-alt"></i> Expand All</button>
             </div>
         </div>
     </div>
@@ -1171,6 +1173,170 @@
             desktopBurgerClose.addEventListener('click', closeDesktopBurger);
             desktopBurgerOverlay.addEventListener('click', closeDesktopBurger);
 
+            // ==================== BURGER MENU BUTTON HANDLERS ====================
+            // File Operations
+            document.getElementById('burgerNewMapBtn')?.addEventListener('click', () => {
+                const name = prompt('Enter name for new mind map:', 'My New Map');
+                if (!name) return;
+                
+                mindmap = {
+                    id: generateId(),
+                    name: name,
+                    color: '#3b6bb0',
+                    x: 600,
+                    y: 200,
+                    children: [],
+                    connections: []
+                };
+                
+                collapsedNodes.clear();
+                panX = 0;
+                panY = 0;
+                currentScale = 1.0;
+                refresh();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerLoadMapBtn')?.addEventListener('click', () => {
+                document.getElementById('loadModal').classList.add('show');
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerExportBtn')?.addEventListener('click', () => {
+                const dataStr = JSON.stringify(mindmap, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'canvas-mindmap.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerShareBtn')?.addEventListener('click', () => {
+                document.getElementById('shareData').value = JSON.stringify(mindmap, null, 2);
+                document.getElementById('shareModal').classList.add('show');
+                closeDesktopBurger();
+            });
+
+            // Connections
+            document.getElementById('burgerConnectBtn')?.addEventListener('click', () => {
+                toggleConnectionMode();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerBreakBtn')?.addEventListener('click', () => {
+                toggleBreakMode();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerLinkBtn')?.addEventListener('click', () => {
+                const nodeId = prompt('Enter node ID to add link (root is: ' + mindmap.id + '):') || mindmap.id;
+                const node = findNodeById(mindmap, nodeId);
+                if (node) {
+                    showLinkModal(nodeId);
+                } else {
+                    alert('Node not found!');
+                }
+                closeDesktopBurger();
+            });
+
+            // Node Actions
+            document.getElementById('burgerAddRootBtn')?.addEventListener('click', () => {
+                const newName = prompt('Enter new root name:');
+                if (!newName) return;
+                
+                const oldRoot = JSON.parse(JSON.stringify(mindmap));
+                mindmap = {
+                    id: generateId(),
+                    name: newName,
+                    color: '#3b6bb0',
+                    x: 600,
+                    y: 150,
+                    children: [oldRoot],
+                    connections: mindmap.connections || []
+                };
+                
+                collapsedNodes.clear();
+                refresh();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerAddChildBtn')?.addEventListener('click', () => {
+                const targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):') || mindmap.id;
+                addChildToNode(targetId);
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerEditNodeBtn')?.addEventListener('click', () => {
+                const id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):') || mindmap.id;
+                editNodeById(id);
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerApplyColorBtn')?.addEventListener('click', () => {
+                const colorPicker = document.getElementById('burgerNodeColorPicker');
+                if (colorPicker) {
+                    const id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):') || mindmap.id;
+                    const node = findNodeById(mindmap, id);
+                    if (node) {
+                        node.color = colorPicker.value;
+                        refresh();
+                    }
+                }
+                closeDesktopBurger();
+            });
+
+            // Layout
+            document.getElementById('burgerResetLayoutBtn')?.addEventListener('click', () => {
+                const layout = (node, x, y, xOffset = 180, yOffset = 120) => {
+                    node.x = x;
+                    node.y = y;
+                    
+                    if (node.children) {
+                        node.children.forEach((child, i) => {
+                            layout(child, x + xOffset + i * 30, y + yOffset, xOffset * 0.8, yOffset);
+                        });
+                    }
+                };
+                
+                layout(mindmap, 600, 150);
+                refresh();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerFullscreenBtn')?.addEventListener('click', () => {
+                const container = document.getElementById('appContainer');
+                container.classList.toggle('fullscreen');
+                const btn = document.getElementById('fullscreenBtn');
+                if (btn) {
+                    if (container.classList.contains('fullscreen')) {
+                        btn.innerHTML = '<i class="fas fa-compress"></i> Exit';
+                    } else {
+                        btn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
+                    }
+                }
+                setTimeout(renderBranches, 100);
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerCollapseAllBtn')?.addEventListener('click', () => {
+                getAllNodes().forEach(node => {
+                    if (node.children?.length) {
+                        collapsedNodes.add(node.id);
+                    }
+                });
+                refresh();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerExpandAllBtn')?.addEventListener('click', () => {
+                collapsedNodes.clear();
+                refresh();
+                closeDesktopBurger();
+            });
+
             // ==================== MOBILE VERSION ====================
             const openMobileVersion = () => {
                 const mobileHTML = `<!DOCTYPE html>
@@ -1181,6 +1347,7 @@
     <title>canvas · mobile</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* Mobile styles - abbreviated for brevity */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -1795,6 +1962,8 @@
             <div class="burger-menu-section-title">LAYOUT</div>
             <div class="burger-menu-buttons">
                 <button class="burger-menu-btn reset-btn" id="mobileResetLayoutBtn"><i class="fas fa-rotate"></i> Reset</button>
+                <button class="burger-menu-btn" id="mobileCollapseAllBtn"><i class="fas fa-compress-alt"></i> Collapse All</button>
+                <button class="burger-menu-btn" id="mobileExpandAllBtn"><i class="fas fa-expand-alt"></i> Expand All</button>
             </div>
         </div>
     </div>
@@ -1808,7 +1977,7 @@
     <div class="modal-overlay" id="loadModal"><div class="modal-card"><h3>Load Map</h3><div class="input-group"><textarea id="loadData" rows="5" placeholder="Paste JSON..."></textarea></div><div class="modal-actions"><button class="btn" id="cancelLoad">Cancel</button><button class="btn load-btn" id="confirmLoad">Load</button></div></div></div>
 
     <script>
-        // Mobile version burger menu
+        // Mobile version burger menu handlers
         const mobileBurgerMenu = document.getElementById('mobileBurgerMenu');
         const mobileBurgerOverlay = document.getElementById('mobileBurgerOverlay');
         const mobileBurgerBtn = document.getElementById('mobileBurgerBtn');
@@ -2757,134 +2926,6 @@
                 panY = 0;
                 applyTransform();
             };
-
-            // ==================== BURGER MENU BUTTON HANDLERS ====================
-            // Map burger menu buttons to original functions
-            document.getElementById('burgerNewMapBtn')?.addEventListener('click', () => {
-                createNewMap();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerLoadMapBtn')?.addEventListener('click', () => {
-                document.getElementById('loadModal').classList.add('show');
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerExportBtn')?.addEventListener('click', () => {
-                const dataStr = JSON.stringify(mindmap, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'canvas-mindmap.json';
-                a.click();
-                URL.revokeObjectURL(url);
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerShareBtn')?.addEventListener('click', () => {
-                document.getElementById('shareData').value = JSON.stringify(mindmap, null, 2);
-                document.getElementById('shareModal').classList.add('show');
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerConnectBtn')?.addEventListener('click', () => {
-                toggleConnectionMode();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerBreakBtn')?.addEventListener('click', () => {
-                toggleBreakMode();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerLinkBtn')?.addEventListener('click', () => {
-                const nodeId = prompt('Enter node ID to add link (root is: ' + mindmap.id + '):') || mindmap.id;
-                const node = findNodeById(mindmap, nodeId);
-                if (node) {
-                    showLinkModal(nodeId);
-                } else {
-                    alert('Node not found!');
-                }
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerAddRootBtn')?.addEventListener('click', () => {
-                const newName = prompt('Enter new root name:');
-                if (!newName) return;
-                
-                const oldRoot = JSON.parse(JSON.stringify(mindmap));
-                mindmap = {
-                    id: generateId(),
-                    name: newName,
-                    color: '#3b6bb0',
-                    x: 600,
-                    y: 150,
-                    children: [oldRoot],
-                    connections: mindmap.connections || []
-                };
-                
-                collapsedNodes.clear();
-                refresh();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerAddChildBtn')?.addEventListener('click', () => {
-                const targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):') || mindmap.id;
-                addChildToNode(targetId);
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerEditNodeBtn')?.addEventListener('click', () => {
-                const id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):') || mindmap.id;
-                editNodeById(id);
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerApplyColorBtn')?.addEventListener('click', () => {
-                const colorPicker = document.getElementById('burgerNodeColorPicker');
-                if (colorPicker) {
-                    const id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):') || mindmap.id;
-                    const node = findNodeById(mindmap, id);
-                    if (node) {
-                        node.color = colorPicker.value;
-                        refresh();
-                    }
-                }
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerResetLayoutBtn')?.addEventListener('click', () => {
-                const layout = (node, x, y, xOffset = 180, yOffset = 120) => {
-                    node.x = x;
-                    node.y = y;
-                    
-                    if (node.children) {
-                        node.children.forEach((child, i) => {
-                            layout(child, x + xOffset + i * 30, y + yOffset, xOffset * 0.8, yOffset);
-                        });
-                    }
-                };
-                
-                layout(mindmap, 600, 150);
-                refresh();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerFullscreenBtn')?.addEventListener('click', () => {
-                const container = document.getElementById('appContainer');
-                container.classList.toggle('fullscreen');
-                const btn = document.getElementById('fullscreenBtn');
-                if (btn) {
-                    if (container.classList.contains('fullscreen')) {
-                        btn.innerHTML = '<i class="fas fa-compress"></i> Exit';
-                    } else {
-                        btn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
-                    }
-                }
-                setTimeout(renderBranches, 100);
-                closeDesktopBurger();
-            });
 
             // ==================== EVENT HANDLERS ====================
             if (darkMode) {
