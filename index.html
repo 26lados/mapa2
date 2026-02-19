@@ -1173,7 +1173,7 @@
             desktopBurgerClose.addEventListener('click', closeDesktopBurger);
             desktopBurgerOverlay.addEventListener('click', closeDesktopBurger);
 
-            // ==================== MOBILE VERSION - COMPLETE WITH PORTRAIT MODE ====================
+            // ==================== MOBILE VERSION - MODIFIED TO HIDE BRANCHES MODULE ====================
             const openMobileVersion = () => {
                 const mobileHTML = `<!DOCTYPE html>
 <html lang="en">
@@ -1231,40 +1231,6 @@
             gap: 6px;
             flex-shrink: 0;
             transition: all 0.3s;
-        }
-
-        /* ===== PORTRAIT MODE: HIDE EVERYTHING EXCEPT CANVAS ===== */
-        @media (orientation: portrait) {
-            .toolbar,
-            .structure-panel,
-            .zoom-controls {
-                display: none !important;
-            }
-            
-            .workspace {
-                flex-direction: column;
-            }
-            
-            .mindmap-area {
-                height: 100vh !important;
-            }
-            
-            /* Optional: Add a small hint that you can rotate for tools */
-            .mindmap-area::after {
-                content: '↻ Rotate for tools';
-                position: absolute;
-                bottom: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(0,0,0,0.5);
-                color: white;
-                padding: 8px 16px;
-                border-radius: 40px;
-                font-size: 14px;
-                pointer-events: none;
-                z-index: 1000;
-                opacity: 0.7;
-            }
         }
 
         .dark-mode .toolbar {
@@ -1554,56 +1520,25 @@
             position: relative;
             flex-direction: column;
         }
+        
+        /* ===== MODIFIED: HIDE BRANCHES MODULE ===== */
         .structure-panel {
-            width: 100%;
-            background: rgba(245, 248, 255, 0.7);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.7);
-            padding: 8px;
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            flex-shrink: 0;
-            transition: all 0.3s;
+            display: none !important;
         }
-        .dark-mode .structure-panel {
-            background: rgba(30, 35, 48, 0.6);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .tree-view {
-            display: flex;
-            gap: 6px;
-            font-size: 0.75rem;
-            min-width: max-content;
-        }
-        .tree-node {
-            padding: 4px 10px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 30px;
-            border: 1px solid rgba(255,255,255,0.7);
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-        .dark-mode .tree-node {
-            background: rgba(45, 52, 68, 0.4);
-            border-color: rgba(255,255,255,0.1);
-            color: #e0e5f0;
-        }
-        .tree-node i { color: #2d6bcb; font-size: 0.7rem; }
+        
         .mindmap-area {
             flex: 1;
             background: rgba(255,255,255,0.25);
             backdrop-filter: blur(6px);
             position: relative;
             overflow: hidden;
-            transition: all 0.3s;
+            height: 100%;
         }
+        
         .dark-mode .mindmap-area {
             background: rgba(0,0,0,0.3);
         }
+        
         #viewport {
             width: 100%;
             height: 100%;
@@ -1612,15 +1547,18 @@
             cursor: grab;
             -webkit-overflow-scrolling: touch;
         }
+        
         #viewport.panning {
             cursor: grabbing;
         }
+        
         #mindmapCanvas {
             position: relative;
             width: 2000px;
             height: 1500px;
             transform-origin: 0 0;
         }
+        
         .branch-container {
             position: absolute;
             top: 0;
@@ -1630,6 +1568,7 @@
             pointer-events: none;
             z-index: 50;
         }
+        
         .branch {
             position: absolute;
             height: 3px;
@@ -1639,15 +1578,18 @@
             border-radius: 3px;
             z-index: 50;
         }
+        
         .branch.tree-branch {
             opacity: 0.7;
         }
+        
         .branch.custom-connection {
             height: 4px;
             background: linear-gradient(90deg, #e67e22, #f39c12) !important;
             box-shadow: 0 0 8px rgba(230, 126, 34, 0.5);
             z-index: 51;
         }
+        
         .node-card {
             position: absolute;
             background: rgba(255,255,255,0.95);
@@ -1665,23 +1607,29 @@
             touch-action: none;
             z-index: 100;
         }
+        
         .dark-mode .node-card {
             background: rgba(35, 42, 58, 0.95);
             color: #e0e5f0;
         }
+        
         .node-card:active {
             cursor: grabbing;
             z-index: 10000;
         }
+        
         .node-card.selected-for-connection {
             border: 3px solid #e67e22;
         }
+        
         .node-card.selected-for-breaking {
             border: 3px solid #e74c3c;
         }
+        
         .node-card.has-link {
             border-right: 4px solid #f39c12;
         }
+        
         .node-card .drag-handle {
             position: absolute;
             top: 4px;
@@ -1689,6 +1637,7 @@
             font-size: 0.7rem;
             color: #94a9c9;
         }
+        
         .node-card .link-icon {
             position: absolute;
             bottom: 4px;
@@ -1699,6 +1648,7 @@
             pointer-events: auto;
             z-index: 101;
         }
+        
         .color-picker-wrapper {
             display: flex;
             align-items: center;
@@ -1707,6 +1657,7 @@
             padding: 4px 8px;
             border-radius: 30px;
         }
+        
         #nodeColorPicker { 
             width: 24px; 
             height: 24px; 
@@ -1714,6 +1665,7 @@
             border: 2px solid white; 
             padding: 0;
         }
+        
         .zoom-controls {
             position: absolute;
             bottom: 12px;
@@ -1727,6 +1679,7 @@
             z-index: 1000;
             transition: all 0.3s;
         }
+        
         .zoom-btn {
             width: 30px;
             height: 30px;
@@ -1740,12 +1693,14 @@
             justify-content: center;
             color: #1d3d6d;
         }
+        
         #zoomLevel {
             min-width: 45px;
             text-align: center;
             font-weight: 600;
             font-size: 0.75rem;
         }
+        
         .theme-toggle {
             background: rgba(255,255,255,0.75);
             border: 1px solid rgba(46, 91, 150, 0.2);
@@ -1753,9 +1708,11 @@
             border-radius: 30px;
             cursor: pointer;
         }
+        
         .file-input-hidden {
             display: none;
         }
+        
         .modal-overlay {
             position: fixed;
             top:0; left:0; width:100%; height:100%;
@@ -1812,9 +1769,7 @@
             </div>
         </div>
         <div class="workspace">
-            <div class="structure-panel">
-                <div class="tree-view" id="treeView"></div>
-            </div>
+            <!-- Structure panel is hidden via CSS -->
             <div class="mindmap-area" id="mindmapArea">
                 <div id="viewport">
                     <div id="mindmapCanvas">
@@ -1913,7 +1868,7 @@
         }
 
         // Mobile version would have its own full implementation here
-        console.log('Mobile version loaded - Portrait mode hides all tools');
+        console.log('Mobile version loaded - branches module hidden');
     <\/script>
 </body>
 </html>`;
