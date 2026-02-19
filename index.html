@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MP.V2</title>
+    <title>Mapa-UMP</title>
     <!-- Font Awesome & Inter -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- interact.js for smooth drag -->
     <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.17/dist/interact.min.js"></script>
     <style>
-        /* ==================== DESKTOP STYLES (UNCHANGED) ==================== */
+        /* ==================== COMPLETE STYLES ==================== */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -1169,851 +1169,17 @@
                 desktopBurgerOverlay.classList.remove('show');
             };
 
-            desktopBurgerBtn.addEventListener('click', openDesktopBurger);
-            desktopBurgerClose.addEventListener('click', closeDesktopBurger);
-            desktopBurgerOverlay.addEventListener('click', closeDesktopBurger);
-
-            // ==================== BURGER MENU BUTTON HANDLERS ====================
-            // File Operations
-            document.getElementById('burgerNewMapBtn')?.addEventListener('click', () => {
-                const name = prompt('Enter name for new mind map:', 'My New Map');
-                if (!name) return;
-                
-                mindmap = {
-                    id: generateId(),
-                    name: name,
-                    color: '#3b6bb0',
-                    x: 600,
-                    y: 200,
-                    children: [],
-                    connections: []
-                };
-                
-                collapsedNodes.clear();
-                panX = 0;
-                panY = 0;
-                currentScale = 1.0;
-                refresh();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerLoadMapBtn')?.addEventListener('click', () => {
-                document.getElementById('loadModal').classList.add('show');
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerExportBtn')?.addEventListener('click', () => {
-                const dataStr = JSON.stringify(mindmap, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'canvas-mindmap.json';
-                a.click();
-                URL.revokeObjectURL(url);
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerShareBtn')?.addEventListener('click', () => {
-                document.getElementById('shareData').value = JSON.stringify(mindmap, null, 2);
-                document.getElementById('shareModal').classList.add('show');
-                closeDesktopBurger();
-            });
-
-            // Connections
-            document.getElementById('burgerConnectBtn')?.addEventListener('click', () => {
-                toggleConnectionMode();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerBreakBtn')?.addEventListener('click', () => {
-                toggleBreakMode();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerLinkBtn')?.addEventListener('click', () => {
-                const nodeId = prompt('Enter node ID to add link (root is: ' + mindmap.id + '):') || mindmap.id;
-                const node = findNodeById(mindmap, nodeId);
-                if (node) {
-                    showLinkModal(nodeId);
-                } else {
-                    alert('Node not found!');
-                }
-                closeDesktopBurger();
-            });
-
-            // Node Actions
-            document.getElementById('burgerAddRootBtn')?.addEventListener('click', () => {
-                const newName = prompt('Enter new root name:');
-                if (!newName) return;
-                
-                const oldRoot = JSON.parse(JSON.stringify(mindmap));
-                mindmap = {
-                    id: generateId(),
-                    name: newName,
-                    color: '#3b6bb0',
-                    x: 600,
-                    y: 150,
-                    children: [oldRoot],
-                    connections: mindmap.connections || []
-                };
-                
-                collapsedNodes.clear();
-                refresh();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerAddChildBtn')?.addEventListener('click', () => {
-                const targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):') || mindmap.id;
-                addChildToNode(targetId);
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerEditNodeBtn')?.addEventListener('click', () => {
-                const id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):') || mindmap.id;
-                editNodeById(id);
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerApplyColorBtn')?.addEventListener('click', () => {
-                const colorPicker = document.getElementById('burgerNodeColorPicker');
-                if (colorPicker) {
-                    const id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):') || mindmap.id;
-                    const node = findNodeById(mindmap, id);
-                    if (node) {
-                        node.color = colorPicker.value;
-                        refresh();
-                    }
-                }
-                closeDesktopBurger();
-            });
-
-            // Layout
-            document.getElementById('burgerResetLayoutBtn')?.addEventListener('click', () => {
-                const layout = (node, x, y, xOffset = 180, yOffset = 120) => {
-                    node.x = x;
-                    node.y = y;
-                    
-                    if (node.children) {
-                        node.children.forEach((child, i) => {
-                            layout(child, x + xOffset + i * 30, y + yOffset, xOffset * 0.8, yOffset);
-                        });
-                    }
-                };
-                
-                layout(mindmap, 600, 150);
-                refresh();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerFullscreenBtn')?.addEventListener('click', () => {
-                const container = document.getElementById('appContainer');
-                container.classList.toggle('fullscreen');
-                const btn = document.getElementById('fullscreenBtn');
-                if (btn) {
-                    if (container.classList.contains('fullscreen')) {
-                        btn.innerHTML = '<i class="fas fa-compress"></i> Exit';
-                    } else {
-                        btn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
-                    }
-                }
-                setTimeout(renderBranches, 100);
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerCollapseAllBtn')?.addEventListener('click', () => {
-                getAllNodes().forEach(node => {
-                    if (node.children?.length) {
-                        collapsedNodes.add(node.id);
-                    }
-                });
-                refresh();
-                closeDesktopBurger();
-            });
-
-            document.getElementById('burgerExpandAllBtn')?.addEventListener('click', () => {
-                collapsedNodes.clear();
-                refresh();
-                closeDesktopBurger();
-            });
+            if (desktopBurgerBtn) desktopBurgerBtn.addEventListener('click', openDesktopBurger);
+            if (desktopBurgerClose) desktopBurgerClose.addEventListener('click', closeDesktopBurger);
+            if (desktopBurgerOverlay) desktopBurgerOverlay.addEventListener('click', closeDesktopBurger);
 
             // ==================== MOBILE VERSION ====================
             const openMobileVersion = () => {
-                const mobileHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>canvas · mobile</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        /* Mobile styles - abbreviated for brevity */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(145deg, #f0f5fe 0%, #e9f0fa 100%);
-            min-height: 100vh;
-            padding: 0;
-            margin: 0;
-            transition: background 0.3s;
-            touch-action: pan-x pan-y;
-        }
-        body.dark-mode {
-            background: linear-gradient(145deg, #1a1f2b 0%, #0f1219 100%);
-        }
-        .app-container {
-            width: 100%;
-            height: 100vh;
-            background: rgba(255,255,255,0.7);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border: none;
-        }
-        .dark-mode .app-container {
-            background: rgba(20, 25, 36, 0.8);
-        }
-        .toolbar {
-            padding: 8px 12px;
-            background: rgba(255,255,255,0.4);
-            border-bottom: 1px solid rgba(255,255,255,0.6);
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-        .dark-mode .toolbar {
-            background: rgba(30, 35, 48, 0.6);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .logo h1 {
-            font-weight: 600;
-            font-size: 1.2rem;
-            color: #1b2b4b;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .dark-mode .logo h1 {
-            color: #e0e5f0;
-        }
-        .logo i {
-            color: #2d6bcb;
-            font-size: 1.3rem;
-        }
-        .action-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            justify-content: flex-end;
-        }
-        .btn {
-            background: rgba(255,255,255,0.75);
-            border: 1px solid rgba(46, 91, 150, 0.2);
-            padding: 6px 10px;
-            border-radius: 30px;
-            font-weight: 500;
-            color: #152b44;
-            font-size: 0.75rem;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.2s;
-            white-space: nowrap;
-            -webkit-touch-callout: none;
-        }
-        .dark-mode .btn {
-            background: rgba(45, 52, 68, 0.8);
-            border-color: rgba(255,255,255,0.1);
-            color: #e0e5f0;
-        }
-        .btn i {
-            color: #2d6bcb;
-            font-size: 0.8rem;
-        }
-        .dark-mode .btn i {
-            color: #6d9eff;
-        }
-        .btn:active {
-            transform: scale(0.95);
-            background: white;
-        }
-        .btn.burger-btn {
-            background: rgba(255,255,255,0.75);
-            border: 1px solid rgba(46, 91, 150, 0.2);
-            padding: 6px 10px;
-            border-radius: 30px;
-            font-weight: 500;
-            color: #152b44;
-            font-size: 0.75rem;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .dark-mode .btn.burger-btn {
-            background: rgba(45, 52, 68, 0.8);
-            border-color: rgba(255,255,255,0.1);
-            color: #e0e5f0;
-        }
-        .btn.burger-btn i {
-            color: #2d6bcb;
-        }
-        .dark-mode .btn.burger-btn i {
-            color: #6d9eff;
-        }
-        .burger-menu {
-            position: fixed;
-            top: 0;
-            right: -280px;
-            width: 260px;
-            height: 100vh;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-left: 1px solid rgba(255,255,255,0.8);
-            box-shadow: -5px 0 30px rgba(0,0,0,0.1);
-            z-index: 10000;
-            transition: right 0.3s ease;
-            padding: 70px 15px 20px;
-            overflow-y: auto;
-        }
-        .dark-mode .burger-menu {
-            background: rgba(30, 35, 48, 0.95);
-            border-left: 1px solid rgba(255,255,255,0.1);
-            box-shadow: -5px 0 30px rgba(0,0,0,0.3);
-        }
-        .burger-menu.open {
-            right: 0;
-        }
-        .burger-menu-close {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 35px;
-            height: 35px;
-            border-radius: 35px;
-            background: rgba(255,255,255,0.8);
-            border: 1px solid rgba(46, 91, 150, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 1rem;
-            color: #152b44;
-        }
-        .dark-mode .burger-menu-close {
-            background: rgba(45, 52, 68, 0.8);
-            border-color: rgba(255,255,255,0.1);
-            color: #e0e5f0;
-        }
-        .burger-menu-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #1b2b4b;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid rgba(45, 107, 203, 0.3);
-        }
-        .dark-mode .burger-menu-title {
-            color: #e0e5f0;
-        }
-        .burger-menu-section {
-            margin-bottom: 20px;
-        }
-        .burger-menu-section-title {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            color: #31567e;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .dark-mode .burger-menu-section-title {
-            color: #a0b0d0;
-        }
-        .burger-menu-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .burger-menu-btn {
-            background: rgba(255,255,255,0.75);
-            border: 1px solid rgba(46, 91, 150, 0.2);
-            padding: 8px 12px;
-            border-radius: 30px;
-            font-weight: 500;
-            color: #152b44;
-            font-size: 0.8rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            width: 100%;
-        }
-        .dark-mode .burger-menu-btn {
-            background: rgba(45, 52, 68, 0.8);
-            border-color: rgba(255,255,255,0.1);
-            color: #e0e5f0;
-        }
-        .burger-menu-btn i {
-            width: 20px;
-            text-align: center;
-        }
-        .burger-menu-btn.share-btn {
-            background: #1d3d6d;
-            color: white;
-        }
-        .burger-menu-btn.share-btn i { color: white; }
-        .burger-menu-btn:hover {
-            background: white;
-            transform: translateX(3px);
-        }
-        .dark-mode .burger-menu-btn:hover {
-            background: #3a435c;
-        }
-        .burger-menu-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.2);
-            backdrop-filter: blur(3px);
-            z-index: 9999;
-            visibility: hidden;
-            opacity: 0;
-            transition: all 0.3s;
-        }
-        .burger-menu-overlay.show {
-            visibility: visible;
-            opacity: 1;
-        }
-        .btn.share-btn {
-            background: #1d3d6d;
-            color: white;
-        }
-        .btn.share-btn i { color: white; }
-        .btn.new-map-btn {
-            background: #2d6bcb;
-            color: white;
-        }
-        .btn.new-map-btn i { color: white; }
-        .btn.connect-btn {
-            background: #9b59b6;
-            color: white;
-        }
-        .btn.connect-btn i { color: white; }
-        .btn.connect-btn.active {
-            background: #e67e22;
-            animation: pulse 1.5s infinite;
-        }
-        .btn.break-btn {
-            background: #e74c3c;
-            color: white;
-        }
-        .btn.break-btn i { color: white; }
-        .btn.break-btn.active {
-            background: #c0392b;
-            animation: pulse 1.5s infinite;
-        }
-        .btn.load-btn {
-            background: #27ae60;
-            color: white;
-        }
-        .btn.load-btn i { color: white; }
-        .btn.link-btn {
-            background: #f39c12;
-            color: white;
-        }
-        .btn.link-btn i { color: white; }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        .workspace {
-            display: flex;
-            flex: 1;
-            min-height: 0;
-            position: relative;
-            flex-direction: column;
-        }
-        .structure-panel {
-            width: 100%;
-            background: rgba(245, 248, 255, 0.7);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.7);
-            padding: 8px;
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            flex-shrink: 0;
-        }
-        .dark-mode .structure-panel {
-            background: rgba(30, 35, 48, 0.6);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .tree-view {
-            display: flex;
-            gap: 6px;
-            font-size: 0.75rem;
-            min-width: max-content;
-        }
-        .tree-node {
-            padding: 4px 10px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 30px;
-            border: 1px solid rgba(255,255,255,0.7);
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-        .dark-mode .tree-node {
-            background: rgba(45, 52, 68, 0.4);
-            border-color: rgba(255,255,255,0.1);
-            color: #e0e5f0;
-        }
-        .tree-node i { color: #2d6bcb; font-size: 0.7rem; }
-        .mindmap-area {
-            flex: 1;
-            background: rgba(255,255,255,0.25);
-            backdrop-filter: blur(6px);
-            position: relative;
-            overflow: hidden;
-        }
-        .dark-mode .mindmap-area {
-            background: rgba(0,0,0,0.3);
-        }
-        #viewport {
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            position: relative;
-            cursor: grab;
-            -webkit-overflow-scrolling: touch;
-        }
-        #viewport.panning {
-            cursor: grabbing;
-        }
-        #mindmapCanvas {
-            position: relative;
-            width: 2000px;
-            height: 1500px;
-            transform-origin: 0 0;
-        }
-        .branch-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 50;
-        }
-        .branch {
-            position: absolute;
-            height: 3px;
-            transform-origin: 0 0;
-            pointer-events: none;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border-radius: 3px;
-            z-index: 50;
-        }
-        .branch.tree-branch {
-            opacity: 0.7;
-        }
-        .branch.custom-connection {
-            height: 4px;
-            background: linear-gradient(90deg, #e67e22, #f39c12) !important;
-            box-shadow: 0 0 8px rgba(230, 126, 34, 0.5);
-            z-index: 51;
-        }
-        .node-card {
-            position: absolute;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(4px);
-            border-radius: 24px;
-            padding: 8px 12px;
-            box-shadow: 0 8px 20px -8px rgba(20,45,90,0.3);
-            border: 2px solid transparent;
-            border-left: 4px solid;
-            min-width: 80px;
-            text-align: center;
-            cursor: grab;
-            user-select: none;
-            font-size: 0.8rem;
-            touch-action: none;
-            z-index: 100;
-        }
-        .dark-mode .node-card {
-            background: rgba(35, 42, 58, 0.95);
-            color: #e0e5f0;
-        }
-        .node-card:active {
-            cursor: grabbing;
-            z-index: 10000;
-        }
-        .node-card.selected-for-connection {
-            border: 3px solid #e67e22;
-        }
-        .node-card.selected-for-breaking {
-            border: 3px solid #e74c3c;
-        }
-        .node-card.has-link {
-            border-right: 4px solid #f39c12;
-        }
-        .node-card .drag-handle {
-            position: absolute;
-            top: 4px;
-            right: 6px;
-            font-size: 0.7rem;
-            color: #94a9c9;
-        }
-        .node-card .link-icon {
-            position: absolute;
-            bottom: 4px;
-            right: 6px;
-            font-size: 0.7rem;
-            color: #f39c12;
-            cursor: pointer;
-            pointer-events: auto;
-            z-index: 101;
-        }
-        .color-picker-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            background: rgba(255,255,255,0.5);
-            padding: 4px 8px;
-            border-radius: 30px;
-        }
-        #nodeColorPicker { 
-            width: 24px; 
-            height: 24px; 
-            border-radius: 24px; 
-            border: 2px solid white; 
-            padding: 0;
-        }
-        .zoom-controls {
-            position: absolute;
-            bottom: 12px;
-            right: 12px;
-            display: flex;
-            gap: 6px;
-            background: rgba(255,255,255,0.6);
-            backdrop-filter: blur(8px);
-            padding: 6px 10px;
-            border-radius: 40px;
-            z-index: 1000;
-        }
-        .zoom-btn {
-            width: 30px;
-            height: 30px;
-            border-radius: 30px;
-            background: white;
-            border: none;
-            font-size: 1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #1d3d6d;
-        }
-        #zoomLevel {
-            min-width: 45px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 0.75rem;
-        }
-        .theme-toggle {
-            background: rgba(255,255,255,0.75);
-            border: 1px solid rgba(46, 91, 150, 0.2);
-            padding: 6px 10px;
-            border-radius: 30px;
-            cursor: pointer;
-        }
-        .file-input-hidden {
-            display: none;
-        }
-        .modal-overlay {
-            position: fixed;
-            top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.2);
-            backdrop-filter: blur(6px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 20000;
-            visibility: hidden;
-            opacity: 0;
-            transition: 0.2s;
-        }
-        .modal-overlay.show { visibility: visible; opacity: 1; }
-        .modal-card {
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 32px;
-            padding: 20px;
-            width: 90%;
-            max-width: 300px;
-        }
-        .dark-mode .modal-card {
-            background: rgba(30, 35, 48, 0.95);
-            color: #e0e5f0;
-        }
-        .input-group { margin-bottom: 12px; }
-        .input-group label { font-weight: 500; color: #2f496e; display: block; margin-bottom: 4px; font-size: 0.8rem; }
-        .dark-mode .input-group label { color: #a0b0d0; }
-        .input-group input, .input-group textarea {
-            width: 100%;
-            padding: 8px 12px;
-            border-radius: 30px;
-            border: 1px solid #d6e2f0;
-            font-size: 0.85rem;
-            background: white;
-        }
-        .dark-mode .input-group input,
-        .dark-mode .input-group textarea {
-            background: #2a2f3c;
-            border-color: #3a435c;
-            color: #e0e5f0;
-        }
-        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
-    </style>
-</head>
-<body>
-    <div class="app-container" id="appContainer">
-        <div class="toolbar">
-            <div class="logo"><h1><i class="fas fa-mobile-alt"></i> canvas·m</h1></div>
-            <div class="action-buttons">
-                <button class="btn theme-toggle" id="themeToggle"><i class="fas fa-moon"></i></button>
-                <button class="btn burger-btn" id="mobileBurgerBtn"><i class="fas fa-bars"></i></button>
-            </div>
-        </div>
-        <div class="workspace">
-            <div class="structure-panel">
-                <div class="tree-view" id="treeView"></div>
-            </div>
-            <div class="mindmap-area" id="mindmapArea">
-                <div id="viewport">
-                    <div id="mindmapCanvas">
-                        <div class="branch-container" id="branchContainer"></div>
-                    </div>
-                </div>
-                <div class="zoom-controls">
-                    <button class="zoom-btn" id="zoomOut"><i class="fas fa-minus"></i></button>
-                    <span id="zoomLevel">100%</span>
-                    <button class="zoom-btn" id="zoomIn"><i class="fas fa-plus"></i></button>
-                    <button class="zoom-btn" id="zoomReset"><i class="fas fa-undo-alt"></i></button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Mobile Burger Menu -->
-    <div class="burger-menu-overlay" id="mobileBurgerOverlay"></div>
-    <div class="burger-menu" id="mobileBurgerMenu">
-        <div class="burger-menu-close" id="mobileBurgerClose"><i class="fas fa-times"></i></div>
-        <div class="burger-menu-title"><i class="fas fa-cog"></i> Tools</div>
-        
-        <div class="burger-menu-section">
-            <div class="burger-menu-section-title">FILE</div>
-            <div class="burger-menu-buttons">
-                <button class="burger-menu-btn new-map-btn" id="mobileNewMapBtn"><i class="fas fa-file"></i> New Map</button>
-                <button class="burger-menu-btn load-btn" id="mobileLoadMapBtn"><i class="fas fa-folder-open"></i> Load Map</button>
-                <button class="burger-menu-btn export-btn" id="mobileExportBtn"><i class="fas fa-download"></i> Export</button>
-                <button class="burger-menu-btn share-btn" id="mobileShareBtn"><i class="fas fa-share-nodes"></i> Share</button>
-            </div>
-        </div>
-
-        <div class="burger-menu-section">
-            <div class="burger-menu-section-title">CONNECT</div>
-            <div class="burger-menu-buttons">
-                <button class="burger-menu-btn connect-btn" id="mobileConnectBtn"><i class="fas fa-link"></i> Connect</button>
-                <button class="burger-menu-btn break-btn" id="mobileBreakBtn"><i class="fas fa-unlink"></i> Break</button>
-                <button class="burger-menu-btn link-btn" id="mobileLinkBtn"><i class="fas fa-globe"></i> Add Link</button>
-            </div>
-        </div>
-
-        <div class="burger-menu-section">
-            <div class="burger-menu-section-title">NODES</div>
-            <div class="burger-menu-buttons">
-                <button class="burger-menu-btn add-root-btn" id="mobileAddRootBtn"><i class="fas fa-plus-circle"></i> New Root</button>
-                <button class="burger-menu-btn add-child-btn" id="mobileAddChildBtn"><i class="fas fa-sitemap"></i> Add Child</button>
-                <button class="burger-menu-btn edit-btn" id="mobileEditNodeBtn"><i class="fas fa-pen-fancy"></i> Edit</button>
-                <button class="burger-menu-btn color-btn" id="mobileApplyColorBtn"><i class="fas fa-fill-drip"></i> Apply Color</button>
-            </div>
-        </div>
-
-        <div class="burger-menu-section">
-            <div class="burger-menu-section-title">LAYOUT</div>
-            <div class="burger-menu-buttons">
-                <button class="burger-menu-btn reset-btn" id="mobileResetLayoutBtn"><i class="fas fa-rotate"></i> Reset</button>
-                <button class="burger-menu-btn" id="mobileCollapseAllBtn"><i class="fas fa-compress-alt"></i> Collapse All</button>
-                <button class="burger-menu-btn" id="mobileExpandAllBtn"><i class="fas fa-expand-alt"></i> Expand All</button>
-            </div>
-        </div>
-    </div>
-
-    <input type="file" id="fileInput" class="file-input-hidden" accept=".json,application/json">
-
-    <div class="modal-overlay" id="editModal"><div class="modal-card"><h3>Edit node</h3><div class="input-group"><label>ID: <span id="editNodeId">-</span></label><input type="text" id="editNodeName" placeholder="New name"></div><div class="modal-actions"><button class="btn" id="cancelEdit">Cancel</button><button class="btn share-btn" id="saveEdit">Save</button></div></div></div>
-    <div class="modal-overlay" id="colorModal"><div class="modal-card"><h3>Change color</h3><div class="input-group"><label>Node ID: <span id="colorNodeId">-</span></label><input type="color" id="nodeColorModalPicker" value="#2d6bcb"></div><div class="modal-actions"><button class="btn" id="cancelColor">Cancel</button><button class="btn share-btn" id="applyColorModal">Apply</button></div></div></div>
-    <div class="modal-overlay" id="linkModal"><div class="modal-card"><h3>Add Link</h3><div class="input-group"><label>Node ID: <span id="linkNodeId">-</span></label><input type="text" id="linkUrl" placeholder="https://" value="https://"></div><div class="input-group"><input type="text" id="linkText" placeholder="Link text"></div><div class="modal-actions"><button class="btn" id="cancelLink">Cancel</button><button class="btn link-btn" id="saveLink">Save</button></div></div></div>
-    <div class="modal-overlay" id="shareModal"><div class="modal-card"><h3>Share map</h3><div class="input-group"><textarea id="shareData" rows="5" readonly></textarea></div><div class="modal-actions"><button class="btn" id="copyShareBtn">Copy</button><button class="btn share-btn" id="closeShareBtn">Close</button></div></div></div>
-    <div class="modal-overlay" id="loadModal"><div class="modal-card"><h3>Load Map</h3><div class="input-group"><textarea id="loadData" rows="5" placeholder="Paste JSON..."></textarea></div><div class="modal-actions"><button class="btn" id="cancelLoad">Cancel</button><button class="btn load-btn" id="confirmLoad">Load</button></div></div></div>
-
-    <script>
-        // Mobile version burger menu handlers
-        const mobileBurgerMenu = document.getElementById('mobileBurgerMenu');
-        const mobileBurgerOverlay = document.getElementById('mobileBurgerOverlay');
-        const mobileBurgerBtn = document.getElementById('mobileBurgerBtn');
-        const mobileBurgerClose = document.getElementById('mobileBurgerClose');
-
-        if (mobileBurgerBtn) {
-            mobileBurgerBtn.addEventListener('click', () => {
-                mobileBurgerMenu.classList.add('open');
-                mobileBurgerOverlay.classList.add('show');
-            });
-        }
-
-        if (mobileBurgerClose) {
-            mobileBurgerClose.addEventListener('click', () => {
-                mobileBurgerMenu.classList.remove('open');
-                mobileBurgerOverlay.classList.remove('show');
-            });
-        }
-
-        if (mobileBurgerOverlay) {
-            mobileBurgerOverlay.addEventListener('click', () => {
-                mobileBurgerMenu.classList.remove('open');
-                mobileBurgerOverlay.classList.remove('show');
-            });
-        }
-
-        // Mobile version would have its own full implementation here
-        console.log('Mobile version loaded');
-    <\/script>
-</body>
-</html>`;
-
-                // Open in new tab
                 const mobileWindow = window.open('', '_blank');
-                mobileWindow.document.write(mobileHTML);
-                mobileWindow.document.close();
+                if (mobileWindow) {
+                    mobileWindow.document.write('<!DOCTYPE html><html><head><title>Mobile Version</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:system-ui;padding:20px;text-align:center;background:#f0f5fe;}</style></head><body><h1>Mobile Version</h1><p>This would contain the full mobile-optimized version.</p><button onclick="window.close()">Close</button></body></html>');
+                    mobileWindow.document.close();
+                }
             };
 
             // ==================== LINK FUNCTIONALITY ====================
@@ -2113,21 +1279,23 @@
                 const connectBtn = document.getElementById('connectBtn');
                 const breakBtn = document.getElementById('breakBtn');
                 
-                if (connectionMode) {
-                    connectBtn.classList.add('active');
-                    connectBtn.innerHTML = '<i class="fas fa-link"></i> Cancel';
-                    breakBtn.classList.remove('active');
-                    breakBtn.innerHTML = '<i class="fas fa-unlink"></i> Break';
-                    
-                    selectedNodeForConnection = null;
-                    selectedNodeForBreaking = null;
-                    
-                    document.querySelectorAll('.node-card.selected-for-connection, .node-card.selected-for-breaking').forEach(el => {
-                        el.classList.remove('selected-for-connection', 'selected-for-breaking');
-                    });
-                } else {
-                    connectBtn.classList.remove('active');
-                    connectBtn.innerHTML = '<i class="fas fa-link"></i> Connect';
+                if (connectBtn && breakBtn) {
+                    if (connectionMode) {
+                        connectBtn.classList.add('active');
+                        connectBtn.innerHTML = '<i class="fas fa-link"></i> Cancel';
+                        breakBtn.classList.remove('active');
+                        breakBtn.innerHTML = '<i class="fas fa-unlink"></i> Break';
+                        
+                        selectedNodeForConnection = null;
+                        selectedNodeForBreaking = null;
+                        
+                        document.querySelectorAll('.node-card.selected-for-connection, .node-card.selected-for-breaking').forEach(el => {
+                            el.classList.remove('selected-for-connection', 'selected-for-breaking');
+                        });
+                    } else {
+                        connectBtn.classList.remove('active');
+                        connectBtn.innerHTML = '<i class="fas fa-link"></i> Connect';
+                    }
                 }
             };
 
@@ -2138,21 +1306,23 @@
                 const connectBtn = document.getElementById('connectBtn');
                 const breakBtn = document.getElementById('breakBtn');
                 
-                if (breakMode) {
-                    breakBtn.classList.add('active');
-                    breakBtn.innerHTML = '<i class="fas fa-unlink"></i> Cancel';
-                    connectBtn.classList.remove('active');
-                    connectBtn.innerHTML = '<i class="fas fa-link"></i> Connect';
-                    
-                    selectedNodeForBreaking = null;
-                    selectedNodeForConnection = null;
-                    
-                    document.querySelectorAll('.node-card.selected-for-connection, .node-card.selected-for-breaking').forEach(el => {
-                        el.classList.remove('selected-for-connection', 'selected-for-breaking');
-                    });
-                } else {
-                    breakBtn.classList.remove('active');
-                    breakBtn.innerHTML = '<i class="fas fa-unlink"></i> Break';
+                if (connectBtn && breakBtn) {
+                    if (breakMode) {
+                        breakBtn.classList.add('active');
+                        breakBtn.innerHTML = '<i class="fas fa-unlink"></i> Cancel';
+                        connectBtn.classList.remove('active');
+                        connectBtn.innerHTML = '<i class="fas fa-link"></i> Connect';
+                        
+                        selectedNodeForBreaking = null;
+                        selectedNodeForConnection = null;
+                        
+                        document.querySelectorAll('.node-card.selected-for-connection, .node-card.selected-for-breaking').forEach(el => {
+                            el.classList.remove('selected-for-connection', 'selected-for-breaking');
+                        });
+                    } else {
+                        breakBtn.classList.remove('active');
+                        breakBtn.innerHTML = '<i class="fas fa-unlink"></i> Break';
+                    }
                 }
             };
 
@@ -2214,6 +1384,8 @@
                 const modal = document.getElementById('breakConnectionsModal');
                 const listContainer = document.getElementById('connectionsList');
                 
+                if (!modal || !listContainer) return;
+                
                 const connections = mindmap.connections.filter(conn => 
                     conn.from === nodeId || conn.to === nodeId
                 );
@@ -2256,6 +1428,7 @@
 
             const setupContextMenu = () => {
                 const canvas = document.getElementById('mindmapCanvas');
+                if (!canvas) return;
                 
                 canvas.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
@@ -2265,86 +1438,113 @@
                     if (nodeCard) {
                         activeNodeId = nodeCard.getAttribute('data-id');
                         
-                        contextMenu.style.left = e.clientX + 'px';
-                        contextMenu.style.top = e.clientY + 'px';
-                        contextMenu.classList.add('show');
+                        if (contextMenu) {
+                            contextMenu.style.left = e.clientX + 'px';
+                            contextMenu.style.top = e.clientY + 'px';
+                            contextMenu.classList.add('show');
+                        }
                     } else {
-                        contextMenu.classList.remove('show');
+                        if (contextMenu) contextMenu.classList.remove('show');
                         activeNodeId = null;
                     }
                 });
 
                 document.addEventListener('click', (e) => {
-                    if (!contextMenu.contains(e.target)) {
+                    if (contextMenu && !contextMenu.contains(e.target)) {
                         contextMenu.classList.remove('show');
                     }
                 });
 
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape') {
-                        contextMenu.classList.remove('show');
+                        if (contextMenu) contextMenu.classList.remove('show');
                         if (connectionMode) toggleConnectionMode();
                         if (breakMode) toggleBreakMode();
                     }
                 });
 
-                document.getElementById('contextAddChild').addEventListener('click', () => {
-                    if (activeNodeId) {
-                        addChildToNode(activeNodeId);
-                        contextMenu.classList.remove('show');
-                    }
-                });
+                const addChildItem = document.getElementById('contextAddChild');
+                const editItem = document.getElementById('contextEdit');
+                const colorItem = document.getElementById('contextColor');
+                const addLinkItem = document.getElementById('contextAddLink');
+                const removeLinkItem = document.getElementById('contextRemoveLink');
+                const collapseItem = document.getElementById('contextCollapse');
+                const deleteItem = document.getElementById('contextDelete');
+                const breakConnItem = document.getElementById('contextBreakConnection');
 
-                document.getElementById('contextEdit').addEventListener('click', () => {
-                    if (activeNodeId) {
-                        editNodeById(activeNodeId);
-                        contextMenu.classList.remove('show');
-                    }
-                });
-
-                document.getElementById('contextColor').addEventListener('click', () => {
-                    if (activeNodeId) {
-                        changeNodeColor(activeNodeId);
-                        contextMenu.classList.remove('show');
-                    }
-                });
-
-                document.getElementById('contextAddLink').addEventListener('click', () => {
-                    if (activeNodeId) {
-                        showLinkModal(activeNodeId);
-                        contextMenu.classList.remove('show');
-                    }
-                });
-
-                document.getElementById('contextRemoveLink').addEventListener('click', () => {
-                    if (activeNodeId) {
-                        if (confirm('Remove link from this node?')) {
-                            removeLinkFromNode(activeNodeId);
+                if (addChildItem) {
+                    addChildItem.addEventListener('click', () => {
+                        if (activeNodeId) {
+                            addChildToNode(activeNodeId);
+                            if (contextMenu) contextMenu.classList.remove('show');
                         }
-                        contextMenu.classList.remove('show');
-                    }
-                });
+                    });
+                }
 
-                document.getElementById('contextCollapse').addEventListener('click', () => {
-                    if (activeNodeId) {
-                        toggleCollapseNode(activeNodeId);
-                        contextMenu.classList.remove('show');
-                    }
-                });
+                if (editItem) {
+                    editItem.addEventListener('click', () => {
+                        if (activeNodeId) {
+                            editNodeById(activeNodeId);
+                            if (contextMenu) contextMenu.classList.remove('show');
+                        }
+                    });
+                }
 
-                document.getElementById('contextDelete').addEventListener('click', () => {
-                    if (activeNodeId) {
-                        deleteNode(activeNodeId);
-                        contextMenu.classList.remove('show');
-                    }
-                });
+                if (colorItem) {
+                    colorItem.addEventListener('click', () => {
+                        if (activeNodeId) {
+                            changeNodeColor(activeNodeId);
+                            if (contextMenu) contextMenu.classList.remove('show');
+                        }
+                    });
+                }
 
-                document.getElementById('contextBreakConnection').addEventListener('click', () => {
-                    if (activeNodeId) {
-                        breakConnection(activeNodeId);
-                        contextMenu.classList.remove('show');
-                    }
-                });
+                if (addLinkItem) {
+                    addLinkItem.addEventListener('click', () => {
+                        if (activeNodeId) {
+                            showLinkModal(activeNodeId);
+                            if (contextMenu) contextMenu.classList.remove('show');
+                        }
+                    });
+                }
+
+                if (removeLinkItem) {
+                    removeLinkItem.addEventListener('click', () => {
+                        if (activeNodeId) {
+                            if (confirm('Remove link from this node?')) {
+                                removeLinkFromNode(activeNodeId);
+                            }
+                            if (contextMenu) contextMenu.classList.remove('show');
+                        }
+                    });
+                }
+
+                if (collapseItem) {
+                    collapseItem.addEventListener('click', () => {
+                        if (activeNodeId) {
+                            toggleCollapseNode(activeNodeId);
+                            if (contextMenu) contextMenu.classList.remove('show');
+                        }
+                    });
+                }
+
+                if (deleteItem) {
+                    deleteItem.addEventListener('click', () => {
+                        if (activeNodeId) {
+                            deleteNode(activeNodeId);
+                            if (contextMenu) contextMenu.classList.remove('show');
+                        }
+                    });
+                }
+
+                if (breakConnItem) {
+                    breakConnItem.addEventListener('click', () => {
+                        if (activeNodeId) {
+                            breakConnection(activeNodeId);
+                            if (contextMenu) contextMenu.classList.remove('show');
+                        }
+                    });
+                }
             };
 
             // ==================== NEW MAP ====================
@@ -2397,9 +1597,12 @@
                 if (!node) return;
                 
                 currentNodeToEdit = nodeId;
-                document.getElementById('editNodeId').innerText = nodeId;
-                document.getElementById('editNodeName').value = node.name;
-                document.getElementById('editModal').classList.add('show');
+                const editNodeIdSpan = document.getElementById('editNodeId');
+                const editNodeNameInput = document.getElementById('editNodeName');
+                if (editNodeIdSpan) editNodeIdSpan.innerText = nodeId;
+                if (editNodeNameInput) editNodeNameInput.value = node.name;
+                const editModal = document.getElementById('editModal');
+                if (editModal) editModal.classList.add('show');
             };
 
             const changeNodeColor = (nodeId) => {
@@ -2407,9 +1610,12 @@
                 if (!node) return;
                 
                 currentNodeToColor = nodeId;
-                document.getElementById('colorNodeId').innerText = nodeId;
-                document.getElementById('nodeColorModalPicker').value = node.color || '#2d6bcb';
-                document.getElementById('colorModal').classList.add('show');
+                const colorNodeIdSpan = document.getElementById('colorNodeId');
+                const colorPicker = document.getElementById('nodeColorModalPicker');
+                if (colorNodeIdSpan) colorNodeIdSpan.innerText = nodeId;
+                if (colorPicker) colorPicker.value = node.color || '#2d6bcb';
+                const colorModal = document.getElementById('colorModal');
+                if (colorModal) colorModal.classList.add('show');
             };
 
             const showLinkModal = (nodeId) => {
@@ -2417,17 +1623,22 @@
                 if (!node) return;
                 
                 currentNodeToLink = nodeId;
-                document.getElementById('linkNodeId').innerText = nodeId;
+                const linkNodeIdSpan = document.getElementById('linkNodeId');
+                const linkUrlInput = document.getElementById('linkUrl');
+                const linkTextInput = document.getElementById('linkText');
+                
+                if (linkNodeIdSpan) linkNodeIdSpan.innerText = nodeId;
                 
                 if (node.link) {
-                    document.getElementById('linkUrl').value = node.link.url || 'https://';
-                    document.getElementById('linkText').value = node.link.text || '';
+                    if (linkUrlInput) linkUrlInput.value = node.link.url || 'https://';
+                    if (linkTextInput) linkTextInput.value = node.link.text || '';
                 } else {
-                    document.getElementById('linkUrl').value = 'https://';
-                    document.getElementById('linkText').value = '';
+                    if (linkUrlInput) linkUrlInput.value = 'https://';
+                    if (linkTextInput) linkTextInput.value = '';
                 }
                 
-                document.getElementById('linkModal').classList.add('show');
+                const linkModal = document.getElementById('linkModal');
+                if (linkModal) linkModal.classList.add('show');
             };
 
             const toggleCollapseNode = (nodeId) => {
@@ -2680,7 +1891,8 @@
                 const canvas = document.getElementById('mindmapCanvas');
                 if (!canvas) return;
                 canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
-                document.getElementById('zoomLevel').innerText = Math.round(currentScale * 100) + '%';
+                const zoomLevel = document.getElementById('zoomLevel');
+                if (zoomLevel) zoomLevel.innerText = Math.round(currentScale * 100) + '%';
                 renderBranches();
             };
 
@@ -2709,6 +1921,8 @@
                             if (!offset) return;
 
                             const viewport = document.getElementById('viewport');
+                            if (!viewport) return;
+                            
                             const viewportRect = viewport.getBoundingClientRect();
 
                             let screenX = event.clientX - offset.x;
@@ -2861,9 +2075,10 @@
             // ==================== ZOOM & PAN ====================
             const setupPanning = () => {
                 const viewport = document.getElementById('viewport');
+                if (!viewport) return;
                 
                 viewport.addEventListener('mousedown', (e) => {
-                    if (e.target === viewport || e.target.id === 'mindmapCanvas' || e.target.classList.contains('branch-container')) {
+                    if (e.target === viewport || e.target.id === 'mindmapCanvas' || (e.target.classList && e.target.classList.contains('branch-container'))) {
                         isPanning = true;
                         startPanX = e.clientX - panX;
                         startPanY = e.clientY - panY;
@@ -2882,13 +2097,15 @@
 
                 window.addEventListener('mouseup', () => {
                     isPanning = false;
-                    viewport.classList.remove('panning');
+                    if (viewport) viewport.classList.remove('panning');
                 });
             };
 
             const zoomIn = () => {
                 if (currentScale < MAX_SCALE) {
                     const viewport = document.getElementById('viewport');
+                    if (!viewport) return;
+                    
                     const rect = viewport.getBoundingClientRect();
                     const centerX = rect.width / 2;
                     const centerY = rect.height / 2;
@@ -2906,6 +2123,8 @@
             const zoomOut = () => {
                 if (currentScale > MIN_SCALE) {
                     const viewport = document.getElementById('viewport');
+                    if (!viewport) return;
+                    
                     const rect = viewport.getBoundingClientRect();
                     const centerX = rect.width / 2;
                     const centerY = rect.height / 2;
@@ -2927,38 +2146,187 @@
                 applyTransform();
             };
 
+            // ==================== BURGER MENU BUTTON HANDLERS ====================
+            document.getElementById('burgerNewMapBtn')?.addEventListener('click', () => {
+                createNewMap();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerLoadMapBtn')?.addEventListener('click', () => {
+                document.getElementById('loadModal')?.classList.add('show');
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerExportBtn')?.addEventListener('click', () => {
+                const dataStr = JSON.stringify(mindmap, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'canvas-mindmap.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerShareBtn')?.addEventListener('click', () => {
+                const shareData = document.getElementById('shareData');
+                if (shareData) shareData.value = JSON.stringify(mindmap, null, 2);
+                document.getElementById('shareModal')?.classList.add('show');
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerConnectBtn')?.addEventListener('click', () => {
+                toggleConnectionMode();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerBreakBtn')?.addEventListener('click', () => {
+                toggleBreakMode();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerLinkBtn')?.addEventListener('click', () => {
+                const nodeId = prompt('Enter node ID to add link (root is: ' + mindmap.id + '):') || mindmap.id;
+                const node = findNodeById(mindmap, nodeId);
+                if (node) {
+                    showLinkModal(nodeId);
+                } else {
+                    alert('Node not found!');
+                }
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerAddRootBtn')?.addEventListener('click', () => {
+                const newName = prompt('Enter new root name:');
+                if (!newName) return;
+                
+                const oldRoot = JSON.parse(JSON.stringify(mindmap));
+                mindmap = {
+                    id: generateId(),
+                    name: newName,
+                    color: '#3b6bb0',
+                    x: 600,
+                    y: 150,
+                    children: [oldRoot],
+                    connections: mindmap.connections || []
+                };
+                
+                collapsedNodes.clear();
+                refresh();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerAddChildBtn')?.addEventListener('click', () => {
+                const targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):') || mindmap.id;
+                addChildToNode(targetId);
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerEditNodeBtn')?.addEventListener('click', () => {
+                const id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):') || mindmap.id;
+                editNodeById(id);
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerApplyColorBtn')?.addEventListener('click', () => {
+                const colorPicker = document.getElementById('burgerNodeColorPicker');
+                if (colorPicker) {
+                    const id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):') || mindmap.id;
+                    const node = findNodeById(mindmap, id);
+                    if (node) {
+                        node.color = colorPicker.value;
+                        refresh();
+                    }
+                }
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerResetLayoutBtn')?.addEventListener('click', () => {
+                const layout = (node, x, y, xOffset = 180, yOffset = 120) => {
+                    node.x = x;
+                    node.y = y;
+                    
+                    if (node.children) {
+                        node.children.forEach((child, i) => {
+                            layout(child, x + xOffset + i * 30, y + yOffset, xOffset * 0.8, yOffset);
+                        });
+                    }
+                };
+                
+                layout(mindmap, 600, 150);
+                refresh();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerFullscreenBtn')?.addEventListener('click', () => {
+                const container = document.getElementById('appContainer');
+                if (container) {
+                    container.classList.toggle('fullscreen');
+                    const btn = document.getElementById('fullscreenBtn');
+                    if (btn) {
+                        if (container.classList.contains('fullscreen')) {
+                            btn.innerHTML = '<i class="fas fa-compress"></i> Exit';
+                        } else {
+                            btn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
+                        }
+                    }
+                }
+                setTimeout(renderBranches, 100);
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerCollapseAllBtn')?.addEventListener('click', () => {
+                getAllNodes().forEach(node => {
+                    if (node.children?.length) {
+                        collapsedNodes.add(node.id);
+                    }
+                });
+                refresh();
+                closeDesktopBurger();
+            });
+
+            document.getElementById('burgerExpandAllBtn')?.addEventListener('click', () => {
+                collapsedNodes.clear();
+                refresh();
+                closeDesktopBurger();
+            });
+
             // ==================== EVENT HANDLERS ====================
             if (darkMode) {
                 document.body.classList.add('dark-mode');
-                document.getElementById('appContainer').classList.add('dark-mode');
-                document.getElementById('themeToggle').innerHTML = '<i class="fas fa-sun"></i> Light';
+                document.getElementById('appContainer')?.classList.add('dark-mode');
+                const themeToggle = document.getElementById('themeToggle');
+                if (themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun"></i> Light';
             }
 
-            document.getElementById('themeToggle').addEventListener('click', () => {
+            document.getElementById('themeToggle')?.addEventListener('click', () => {
                 document.body.classList.toggle('dark-mode');
-                document.getElementById('appContainer').classList.toggle('dark-mode');
+                document.getElementById('appContainer')?.classList.toggle('dark-mode');
                 const btn = document.getElementById('themeToggle');
                 
-                if (document.body.classList.contains('dark-mode')) {
-                    btn.innerHTML = '<i class="fas fa-sun"></i> Light';
-                    localStorage.setItem('canvas-dark', 'true');
-                    darkMode = true;
-                } else {
-                    btn.innerHTML = '<i class="fas fa-moon"></i> Dark';
-                    localStorage.setItem('canvas-dark', 'false');
-                    darkMode = false;
+                if (btn) {
+                    if (document.body.classList.contains('dark-mode')) {
+                        btn.innerHTML = '<i class="fas fa-sun"></i> Light';
+                        localStorage.setItem('canvas-dark', 'true');
+                        darkMode = true;
+                    } else {
+                        btn.innerHTML = '<i class="fas fa-moon"></i> Dark';
+                        localStorage.setItem('canvas-dark', 'false');
+                        darkMode = false;
+                    }
                 }
                 
                 renderMindMap();
             });
 
-            document.getElementById('newMapBtn').addEventListener('click', createNewMap);
+            document.getElementById('newMapBtn')?.addEventListener('click', createNewMap);
             
             // Mobile button
-            document.getElementById('mobileBtn').addEventListener('click', openMobileVersion);
+            document.getElementById('mobileBtn')?.addEventListener('click', openMobileVersion);
 
-            // Original buttons (still work alongside burger menu)
-            document.getElementById('linkBtn').addEventListener('click', () => {
+            // Original buttons
+            document.getElementById('linkBtn')?.addEventListener('click', () => {
                 const nodeId = prompt('Enter node ID to add link (root is: ' + mindmap.id + '):') || mindmap.id;
                 const node = findNodeById(mindmap, nodeId);
                 if (node) {
@@ -2968,38 +2336,45 @@
                 }
             });
 
-            document.getElementById('loadMapBtn').addEventListener('click', () => {
-                document.getElementById('loadData').value = '';
-                document.getElementById('fileInfo').innerHTML = 'Select a JSON file to load or paste below';
-                document.getElementById('loadModal').classList.add('show');
+            document.getElementById('loadMapBtn')?.addEventListener('click', () => {
+                const loadData = document.getElementById('loadData');
+                if (loadData) loadData.value = '';
+                const fileInfo = document.getElementById('fileInfo');
+                if (fileInfo) fileInfo.innerHTML = 'Select a JSON file to load or paste below';
+                document.getElementById('loadModal')?.classList.add('show');
             });
 
             const fileInput = document.getElementById('fileInput');
-            fileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    loadMapFromFile(file);
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        loadMapFromFile(file);
+                    }
+                    fileInput.value = '';
+                });
+            }
+
+            document.getElementById('cancelLoad')?.addEventListener('click', () => {
+                document.getElementById('loadModal')?.classList.remove('show');
+            });
+
+            document.getElementById('confirmLoad')?.addEventListener('click', () => {
+                const loadData = document.getElementById('loadData');
+                if (loadData) {
+                    const jsonText = loadData.value.trim();
+                    if (jsonText) {
+                        loadMapFromJson(jsonText);
+                    } else if (fileInput) {
+                        fileInput.click();
+                    }
                 }
-                fileInput.value = '';
             });
 
-            document.getElementById('cancelLoad').addEventListener('click', () => {
-                document.getElementById('loadModal').classList.remove('show');
-            });
+            document.getElementById('connectBtn')?.addEventListener('click', toggleConnectionMode);
+            document.getElementById('breakBtn')?.addEventListener('click', toggleBreakMode);
 
-            document.getElementById('confirmLoad').addEventListener('click', () => {
-                const jsonText = document.getElementById('loadData').value.trim();
-                if (jsonText) {
-                    loadMapFromJson(jsonText);
-                } else {
-                    fileInput.click();
-                }
-            });
-
-            document.getElementById('connectBtn').addEventListener('click', toggleConnectionMode);
-            document.getElementById('breakBtn').addEventListener('click', toggleBreakMode);
-
-            document.getElementById('addRootBtn').addEventListener('click', () => {
+            document.getElementById('addRootBtn')?.addEventListener('click', () => {
                 const newName = prompt('Enter new root name:');
                 if (!newName) return;
                 
@@ -3018,22 +2393,22 @@
                 refresh();
             });
 
-            document.getElementById('addChildBtn').addEventListener('click', () => {
+            document.getElementById('addChildBtn')?.addEventListener('click', () => {
                 const targetId = prompt('Enter parent node ID (root is: ' + mindmap.id + '):') || mindmap.id;
                 addChildToNode(targetId);
             });
 
-            document.getElementById('editNodeBtn').addEventListener('click', () => {
+            document.getElementById('editNodeBtn')?.addEventListener('click', () => {
                 const id = prompt('Enter node ID to edit (root is: ' + mindmap.id + '):') || mindmap.id;
                 editNodeById(id);
             });
 
-            document.getElementById('applyColorBtn').addEventListener('click', () => {
+            document.getElementById('applyColorBtn')?.addEventListener('click', () => {
                 const id = prompt('Enter node ID to change color (root is: ' + mindmap.id + '):') || mindmap.id;
                 changeNodeColor(id);
             });
 
-            document.getElementById('resetLayoutBtn').addEventListener('click', () => {
+            document.getElementById('resetLayoutBtn')?.addEventListener('click', () => {
                 const layout = (node, x, y, xOffset = 180, yOffset = 120) => {
                     node.x = x;
                     node.y = y;
@@ -3049,12 +2424,12 @@
                 refresh();
             });
 
-            document.getElementById('collapseToggleBtn').addEventListener('click', () => {
+            document.getElementById('collapseToggleBtn')?.addEventListener('click', () => {
                 const id = prompt('Enter node ID to collapse/expand:');
                 if (id) toggleCollapseNode(id);
             });
 
-            document.getElementById('collapseAllBtn').addEventListener('click', () => {
+            document.getElementById('collapseAllBtn')?.addEventListener('click', () => {
                 getAllNodes().forEach(node => {
                     if (node.children?.length) {
                         collapsedNodes.add(node.id);
@@ -3063,30 +2438,34 @@
                 refresh();
             });
 
-            document.getElementById('expandAllBtn').addEventListener('click', () => {
+            document.getElementById('expandAllBtn')?.addEventListener('click', () => {
                 collapsedNodes.clear();
                 refresh();
             });
 
-            document.getElementById('fullscreenBtn').addEventListener('click', () => {
+            document.getElementById('fullscreenBtn')?.addEventListener('click', () => {
                 const container = document.getElementById('appContainer');
-                container.classList.toggle('fullscreen');
-                const btn = document.getElementById('fullscreenBtn');
-                
-                if (container.classList.contains('fullscreen')) {
-                    btn.innerHTML = '<i class="fas fa-compress"></i> Exit';
-                } else {
-                    btn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
+                if (container) {
+                    container.classList.toggle('fullscreen');
+                    const btn = document.getElementById('fullscreenBtn');
+                    
+                    if (btn) {
+                        if (container.classList.contains('fullscreen')) {
+                            btn.innerHTML = '<i class="fas fa-compress"></i> Exit';
+                        } else {
+                            btn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
+                        }
+                    }
                 }
                 
                 setTimeout(renderBranches, 100);
             });
 
-            document.getElementById('zoomIn').addEventListener('click', zoomIn);
-            document.getElementById('zoomOut').addEventListener('click', zoomOut);
-            document.getElementById('zoomReset').addEventListener('click', zoomReset);
+            document.getElementById('zoomIn')?.addEventListener('click', zoomIn);
+            document.getElementById('zoomOut')?.addEventListener('click', zoomOut);
+            document.getElementById('zoomReset')?.addEventListener('click', zoomReset);
 
-            document.getElementById('exportBtn').addEventListener('click', () => {
+            document.getElementById('exportBtn')?.addEventListener('click', () => {
                 const dataStr = JSON.stringify(mindmap, null, 2);
                 const blob = new Blob([dataStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -3097,18 +2476,22 @@
                 URL.revokeObjectURL(url);
             });
 
-            document.getElementById('shareBtn').addEventListener('click', () => {
-                document.getElementById('shareData').value = JSON.stringify(mindmap, null, 2);
-                document.getElementById('shareModal').classList.add('show');
+            document.getElementById('shareBtn')?.addEventListener('click', () => {
+                const shareData = document.getElementById('shareData');
+                if (shareData) shareData.value = JSON.stringify(mindmap, null, 2);
+                document.getElementById('shareModal')?.classList.add('show');
             });
 
             // Modal buttons
-            document.getElementById('cancelEdit').addEventListener('click', () => {
-                document.getElementById('editModal').classList.remove('show');
+            document.getElementById('cancelEdit')?.addEventListener('click', () => {
+                document.getElementById('editModal')?.classList.remove('show');
             });
 
-            document.getElementById('saveEdit').addEventListener('click', () => {
-                const newName = document.getElementById('editNodeName').value.trim();
+            document.getElementById('saveEdit')?.addEventListener('click', () => {
+                const editNodeName = document.getElementById('editNodeName');
+                if (!editNodeName) return;
+                
+                const newName = editNodeName.value.trim();
                 if (!newName) {
                     alert('Name cannot be empty');
                     return;
@@ -3119,34 +2502,42 @@
                     if (node) node.name = newName;
                 }
                 
-                document.getElementById('editModal').classList.remove('show');
+                document.getElementById('editModal')?.classList.remove('show');
                 refresh();
             });
 
-            document.getElementById('cancelColor').addEventListener('click', () => {
-                document.getElementById('colorModal').classList.remove('show');
+            document.getElementById('cancelColor')?.addEventListener('click', () => {
+                document.getElementById('colorModal')?.classList.remove('show');
             });
 
-            document.getElementById('applyColorModal').addEventListener('click', () => {
-                const newColor = document.getElementById('nodeColorModalPicker').value;
+            document.getElementById('applyColorModal')?.addEventListener('click', () => {
+                const colorPicker = document.getElementById('nodeColorModalPicker');
+                if (!colorPicker) return;
+                
+                const newColor = colorPicker.value;
                 
                 if (currentNodeToColor) {
                     const node = findNodeById(mindmap, currentNodeToColor);
                     if (node) node.color = newColor;
                 }
                 
-                document.getElementById('colorModal').classList.remove('show');
+                document.getElementById('colorModal')?.classList.remove('show');
                 refresh();
             });
 
             // Link modal
-            document.getElementById('cancelLink').addEventListener('click', () => {
-                document.getElementById('linkModal').classList.remove('show');
+            document.getElementById('cancelLink')?.addEventListener('click', () => {
+                document.getElementById('linkModal')?.classList.remove('show');
             });
 
-            document.getElementById('saveLink').addEventListener('click', () => {
-                const url = document.getElementById('linkUrl').value.trim();
-                const text = document.getElementById('linkText').value.trim();
+            document.getElementById('saveLink')?.addEventListener('click', () => {
+                const linkUrl = document.getElementById('linkUrl');
+                const linkText = document.getElementById('linkText');
+                
+                if (!linkUrl) return;
+                
+                const url = linkUrl.value.trim();
+                const text = linkText ? linkText.value.trim() : '';
                 
                 if (!url || url === 'https://') {
                     alert('Please enter a valid URL');
@@ -3157,25 +2548,27 @@
                     addLinkToNode(currentNodeToLink, url, text || url);
                 }
                 
-                document.getElementById('linkModal').classList.remove('show');
+                document.getElementById('linkModal')?.classList.remove('show');
             });
 
-            document.getElementById('closeShareBtn').addEventListener('click', () => {
-                document.getElementById('shareModal').classList.remove('show');
+            document.getElementById('closeShareBtn')?.addEventListener('click', () => {
+                document.getElementById('shareModal')?.classList.remove('show');
             });
 
-            document.getElementById('copyShareBtn').addEventListener('click', () => {
-                const data = document.getElementById('shareData').value;
-                navigator.clipboard.writeText(data).then(() => {
-                    alert('Copied to clipboard!');
-                });
+            document.getElementById('copyShareBtn')?.addEventListener('click', () => {
+                const shareData = document.getElementById('shareData');
+                if (shareData) {
+                    navigator.clipboard.writeText(shareData.value).then(() => {
+                        alert('Copied to clipboard!');
+                    });
+                }
             });
 
-            document.getElementById('cancelBreak').addEventListener('click', () => {
-                document.getElementById('breakConnectionsModal').classList.remove('show');
+            document.getElementById('cancelBreak')?.addEventListener('click', () => {
+                document.getElementById('breakConnectionsModal')?.classList.remove('show');
             });
 
-            document.getElementById('breakSelectedBtn').addEventListener('click', () => {
+            document.getElementById('breakSelectedBtn')?.addEventListener('click', () => {
                 const checkboxes = document.querySelectorAll('#connectionsList input[type="checkbox"]:checked');
                 const indices = Array.from(checkboxes).map(cb => parseInt(cb.value));
                 
@@ -3190,19 +2583,24 @@
                     mindmap.connections.splice(index, 1);
                 });
 
-                document.getElementById('breakConnectionsModal').classList.remove('show');
+                document.getElementById('breakConnectionsModal')?.classList.remove('show');
                 refresh();
                 alert(`${indices.length} connection(s) broken`);
             });
 
+            // Close modals on overlay click
             ['editModal', 'colorModal', 'linkModal', 'shareModal', 'breakConnectionsModal', 'loadModal'].forEach(id => {
-                document.getElementById(id).addEventListener('click', (e) => {
-                    if (e.target.classList.contains('modal-overlay')) {
-                        document.getElementById(id).classList.remove('show');
-                    }
-                });
+                const modal = document.getElementById(id);
+                if (modal) {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('modal-overlay')) {
+                            modal.classList.remove('show');
+                        }
+                    });
+                }
             });
 
+            // Initialize
             setupPanning();
             setupContextMenu();
             refresh();
