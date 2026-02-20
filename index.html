@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>canvas · mobile</title>
+    <!-- Font Awesome & Inter -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- interact.js for smooth drag -->
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.17/dist/interact.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(145deg, #f0f5fe 0%, #e9f0fa 100%);
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+            transition: background 0.3s;
+            touch-action: pan-x pan-y;
+            overflow: hidden;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(145deg, #1a1f2b 0%, #0f1219 100%);
+        }
+
+        .app-container {
+            width: 100%;
+            height: 100vh;
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: none;
+        }
+
+        .dark-mode .app-container {
+            background: rgba(20, 25, 36, 0.8);
+        }
+
+        .toolbar {
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.4);
+            border-bottom: 1px solid rgba(255,255,255,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .dark-mode .toolbar {
+            background: rgba(30, 35, 48, 0.6);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo h1 {
+            font-weight: 600;
+            font-size: 1.3rem;
+            color: #1b2b4b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dark-mode .logo h1 {
+            color: #e0e5f0;
+        }
+
+        .logo i {
+            color: #2d6bcb;
+            font-size: 1.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.75);
+            border: 1px solid rgba(46, 91, 150, 0.2);
+            padding: 8px 14px;
+            border-radius: 30px;
+            font-weight: 500;
+            color: #152b44;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            white-space: nowrap;
+            -webkit-touch-callout: none;
+        }
+
+        .dark-mode .btn {
+            background: rgba(45, 52, 68, 0.8);
+            border-color: rgba(255,255,255,0.1);
+            color: #e0e5f0;
+        }
+
+        .btn i {
+            color: #2d6bcb;
+            font-size: 0.9rem;
+        }
+
+        .dark-mode .btn i {
+            color: #6d9eff;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+            background: white;
+        }
+
+        .btn.burger-btn {
+            background: rgba(255,255,255,0.75);
+            border: 1px solid rgba(46, 91, 150, 0.2);
+            padding: 8px 14px;
+            border-radius: 30px;
+            font-weight: 500;
+            color: #152b44;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dark-mode .btn.burger-btn {
+            background: rgba(45, 52, 68, 0.8);
+            border-color: rgba(255,255,255,0.1);
+            color: #e0e5f0;
+        }
+
+        .btn.burger-btn i {
+            color: #2d6bcb;
+        }
+
+        .dark-mode .btn.burger-btn i {
+            color: #6d9eff;
+        }
+
+        /* Burger menu styles */
+        .burger-menu {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 280px;
+            height: 100vh;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255,255,255,0.8);
+            box-shadow: -5px 0 30px rgba(0,0,0,0.1);
+            z-index: 10000;
+            transition: right 0.3s ease;
+            padding: 80px 20px 30px;
+            overflow-y: auto;
+        }
+
+        .dark-mode .burger-menu {
+            background: rgba(30, 35, 48, 0.95);
+            border-left: 1px solid rgba(255,255,255,0.1);
+            box-shadow: -5px 0 30px rgba(0,0,0,0.3);
+        }
+
+        .burger-menu.open {
+            right: 0;
+        }
+
+        .burger-menu-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 40px;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(46, 91, 150, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #152b44;
+            transition: all 0.2s;
+        }
+
+        .dark-mode .burger-menu-close {
+            background: rgba(45, 52, 68, 0.8);
+            border-color: rgba(255,255,255,0.1);
+            color: #e0e5f0;
+        }
+
+        .burger-menu-close:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+
+        .burger-menu-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1b2b4b;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(45, 107, 203, 0.3);
+        }
+
+        .dark-mode .burger-menu-title {
+            color: #e0e5f0;
+            border-bottom-color: rgba(109, 158, 255, 0.3);
+        }
+
+        .burger-menu-section {
+            margin-bottom: 25px;
+        }
+
+        .burger-menu-section-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #31567e;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .dark-mode .burger-menu-section-title {
+            color: #a0b0d0;
+        }
+
+        .burger-menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .burger-menu-btn {
+            background: rgba(255,255,255,0.75);
+            border: 1px solid rgba(46, 91, 150, 0.2);
+            padding: 12px 18px;
+            border-radius: 40px;
+            font-weight: 500;
+            color: #152b44;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+            width: 100%;
+            border-left: 4px solid transparent;
+        }
+
+        .dark-mode .burger-menu-btn {
+            background: rgba(45, 52, 68, 0.8);
+            border-color: rgba(255,255,255,0.1);
+            color: #e0e5f0;
+        }
+
+        .burger-menu-btn i {
+            width: 24px;
+            text-align: center;
+        }
+
+        .burger-menu-btn.new-map-btn i { color: #2d6bcb; }
+        .burger-menu-btn.load-btn i { color: #27ae60; }
+        .burger-menu-btn.connect-btn i { color: #9b59b6; }
+        .burger-menu-btn.break-btn i { color: #e74c3c; }
+        .burger-menu-btn.link-btn i { color: #f39c12; }
+        .burger-menu-btn.add-root-btn i { color: #2d6bcb; }
+        .burger-menu-btn.add-child-btn i { color: #2d6bcb; }
+        .burger-menu-btn.edit-btn i { color: #2d6bcb; }
+        .burger-menu-btn.color-btn i { color: #2d6bcb; }
+        .burger-menu-btn.reset-btn i { color: #2d6bcb; }
+        .burger-menu-btn.export-btn i { color: #2d6bcb; }
+        .burger-menu-btn.share-btn i { color: white; }
+
+        .burger-menu-btn.share-btn {
+            background: #1d3d6d;
+            color: white;
+        }
+        .burger-menu-btn.share-btn i { color: white; }
+
+        .burger-menu-btn:hover {
+            background: white;
+            border-color: #2d6bcb80;
+            transform: translateX(5px);
+        }
+
+        .dark-mode .burger-menu-btn:hover {
+            background: #3a435c;
+        }
+
+        .burger-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(3px);
+            z-index: 9999;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .burger-menu-overlay.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .workspace {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            position: relative;
+        }
+
+        .mindmap-area {
+            flex: 1;
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(6px);
+            position: relative;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .dark-mode .mindmap-area {
+            background: rgba(0,0,0,0.3);
+        }
+
+        #viewport {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            position: relative;
+            cursor: grab;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #viewport.panning {
+            cursor: grabbing;
+        }
+
+        #mindmapCanvas {
+            position: relative;
+            width: 2000px;
+            height: 1500px;
+            transform-origin: 0 0;
+        }
+
+        .branch-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .branch {
+            position: absolute;
+            height: 3px;
+            transform-origin: 0 0;
+            pointer-events: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 3px;
+            z-index: 50;
+        }
+
+        .dark-mode .branch {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .branch.tree-branch {
+            opacity: 0.7;
+        }
+
+        .branch.custom-connection {
+            height: 4px;
+            background: linear-gradient(90deg, #e67e22, #f39c12) !important;
+            box-shadow: 0 0 8px rgba(230, 126, 34, 0.5);
+            z-index: 51;
+        }
+
+        .dark-mode .branch.custom-connection {
+            box-shadow: 0 0 8px rgba(243, 156, 18, 0.5);
+        }
+
+        .node-card {
+            position: absolute;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(4px);
+            border-radius: 24px;
+            padding: 10px 16px;
+            box-shadow: 0 8px 20px -8px rgba(20,45,90,0.3);
+            border: 2px solid transparent;
+            border-left: 4px solid;
+            min-width: 100px;
+            text-align: center;
+            cursor: grab;
+            user-select: none;
+            font-size: 0.9rem;
+            touch-action: none;
+            z-index: 100;
+        }
+
+        .dark-mode .node-card {
+            background: rgba(35, 42, 58, 0.95);
+            color: #e0e5f0;
+        }
+
+        .node-card:active {
+            cursor: grabbing;
+            z-index: 10000;
+        }
+
+        .node-card.selected-for-connection {
+            border: 3px solid #e67e22;
+        }
+
+        .node-card.selected-for-breaking {
+            border: 3px solid #e74c3c;
+        }
+
+        .node-card.has-link {
+            border-right: 4px solid #f39c12;
+        }
+
+        .node-card.collapsed {
+            opacity: 0.8;
+        }
+
+        .node-card .drag-handle {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            font-size: 0.8rem;
+            color: #94a9c9;
+            cursor: grab;
+        }
+
+        .node-card .link-icon {
+            position: absolute;
+            bottom: 6px;
+            right: 8px;
+            font-size: 0.8rem;
+            color: #f39c12;
+            cursor: pointer;
+            pointer-events: auto;
+            z-index: 101;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            background: rgba(255,255,255,0.6);
+            backdrop-filter: blur(8px);
+            padding: 10px 16px;
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.9);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .dark-mode .zoom-controls {
+            background: rgba(30, 35, 48, 0.8);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 40px;
+            background: white;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1d3d6d;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .dark-mode .zoom-btn {
+            background: #3a435c;
+            color: #e0e5f0;
+        }
+
+        .zoom-btn:active {
+            transform: scale(0.9);
+        }
+
+        #zoomLevel {
+            min-width: 60px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.75);
+            border: 1px solid rgba(46, 91, 150, 0.2);
+            padding: 8px 14px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        /* Hidden file input */
+        .file-input-hidden {
+            display: none;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.2s;
+        }
+
+        .modal-overlay.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .modal-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 30px;
+            width: 90%;
+            max-width: 350px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .dark-mode .modal-card {
+            background: rgba(30, 35, 48, 0.95);
+            color: #e0e5f0;
+        }
+
+        .modal-card h3 {
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            font-weight: 500;
+            color: #2f496e;
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        .dark-mode .input-group label {
+            color: #a0b0d0;
+        }
+
+        .input-group input,
+        .input-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 30px;
+            border: 1px solid #d6e2f0;
+            font-size: 0.95rem;
+            background: white;
+        }
+
+        .dark-mode .input-group input,
+        .dark-mode .input-group textarea {
+            background: #2a2f3c;
+            border-color: #3a435c;
+            color: #e0e5f0;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" id="appContainer">
+        <div class="toolbar">
+            <div class="logo">
+                <h1><i class="fas fa-mobile-alt"></i> canvas·m</h1>
+            </div>
+            <div class="action-buttons">
+                <button class="btn theme-toggle" id="themeToggle"><i class="fas fa-moon"></i></button>
+                <button class="btn burger-btn" id="burgerBtn"><i class="fas fa-bars"></i> Menu</button>
+            </div>
+        </div>
+
+        <div class="workspace">
+            <div class="mindmap-area" id="mindmapArea">
+                <div id="viewport">
+                    <div id="mindmapCanvas">
+                        <div class="branch-container" id="branchContainer"></div>
+                    </div>
+                </div>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" id="zoomOut"><i class="fas fa-minus"></i></button>
+                    <span id="zoomLevel">100%</span>
+                    <button class="zoom-btn" id="zoomIn"><i class="fas fa-plus"></i></button>
+                    <button class="zoom-btn" id="zoomReset"><i class="fas fa-undo-alt"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Burger Menu Overlay -->
+    <div class="burger-menu-overlay" id="burgerOverlay"></div>
+    
+    <!-- Burger Menu -->
+    <div class="burger-menu" id="burgerMenu">
+        <div class="burger-menu-close" id="burgerClose"><i class="fas fa-times"></i></div>
+        <div class="burger-menu-title"><i class="fas fa-cog"></i> Tools</div>
+        
+        <div class="burger-menu-section">
+            <div class="burger-menu-section-title">FILE</div>
+            <div class="burger-menu-buttons">
+                <button class="burger-menu-btn new-map-btn" id="newMapBtn"><i class="fas fa-file"></i> New Map</button>
+                <button class="burger-menu-btn load-btn" id="loadMapBtn"><i class="fas fa-folder-open"></i> Load Map</button>
+                <button class="burger-menu-btn export-btn" id="exportBtn"><i class="fas fa-download"></i> Export</button>
+                <button class="burger-menu-btn share-btn" id="shareBtn"><i class="fas fa-share-nodes"></i> Share</button>
+            </div>
+        </div>
+
+        <div class="burger-menu-section">
+            <div class="burger-menu-section-title">CONNECTIONS</div>
+            <div class="burger-menu-buttons">
+                <button class="burger-menu-btn connect-btn" id="connectBtn"><i class="fas fa-link"></i> Connect</button>
+                <button class="burger-menu-btn break-btn" id="breakBtn"><i class="fas fa-unlink"></i> Break</button>
+                <button class="burger-menu-btn link-btn" id="linkBtn"><i class="fas fa-globe"></i> Add Link</button>
+            </div>
+        </div>
+
+        <div class="burger-menu-section">
+            <div class="burger-menu-section-title">NODES</div>
+            <div class="burger-menu-buttons">
+                <button class="burger-menu-btn add-root-btn" id="addRootBtn"><i class="fas fa-plus-circle"></i> New Root</button>
+                <button class="burger-menu-btn add-child-btn" id="addChildBtn"><i class="fas fa-sitemap"></i> Add Child</button>
+                <button class="burger-menu-btn edit-btn" id="editBtn"><i class="fas fa-pen-fancy"></i> Edit Node</button>
+                <button class="burger-menu-btn color-btn" id="colorBtn"><i class="fas fa-palette"></i> Change Color</button>
+            </div>
+        </div>
+
+        <div class="burger-menu-section">
+            <div class="burger-menu-section-title">LAYOUT</div>
+            <div class="burger-menu-buttons">
+                <button class="burger-menu-btn reset-btn" id="resetBtn"><i class="fas fa-rotate"></i> Reset Layout</button>
+                <button class="burger-menu-btn" id="collapseAllBtn"><i class="fas fa-compress-alt"></i> Collapse All</button>
+                <button class="burger-menu-btn" id="expandAllBtn"><i class="fas fa-expand-alt"></i> Expand All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="fileInput" class="file-input-hidden" accept=".json,application/json">
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-card">
+            <h3><i class="fas fa-pencil" style="color:#2d6bcb;"></i> Edit Node</h3>
+            <div class="input-group">
+                <label>Node ID: <span id="editNodeId" style="font-family: monospace;">-</span></label>
+                <input type="text" id="editNodeName" placeholder="Enter new name">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="cancelEdit">Cancel</button>
+                <button class="btn share-btn" id="saveEdit">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="colorModal">
+        <div class="modal-card">
+            <h3><i class="fas fa-palette"></i> Change Color</h3>
+            <div class="input-group">
+                <label>Node ID: <span id="colorNodeId" style="font-family: monospace;">-</span></label>
+                <input type="color" id="nodeColorPicker" value="#2d6bcb" style="height: 50px;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="cancelColor">Cancel</button>
+                <button class="btn share-btn" id="applyColor">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="linkModal">
+        <div class="modal-card">
+            <h3><i class="fas fa-globe" style="color:#f39c12;"></i> Add Link</h3>
+            <div class="input-group">
+                <label>Node ID: <span id="linkNodeId" style="font-family: monospace;">-</span></label>
+                <input type="text" id="linkUrl" placeholder="https://example.com" value="https://">
+            </div>
+            <div class="input-group">
+                <label>Link text (optional):</label>
+                <input type="text" id="linkText" placeholder="Visit website">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="cancelLink">Cancel</button>
+                <button class="btn link-btn" id="saveLink">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="shareModal">
+        <div class="modal-card">
+            <h3><i class="fas fa-share-nodes"></i> Share Map</h3>
+            <div class="input-group">
+                <textarea id="shareData" rows="6" readonly style="font-family: monospace;"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="copyShareBtn">Copy</button>
+                <button class="btn share-btn" id="closeShareBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="loadModal">
+        <div class="modal-card">
+            <h3><i class="fas fa-folder-open" style="color:#27ae60;"></i> Load Map</h3>
+            <div class="input-group">
+                <textarea id="loadData" rows="6" placeholder="Paste JSON here..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="cancelLoad">Cancel</button>
+                <button class="btn load-btn" id="confirmLoad">Load</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ==================== DATA MODEL ====================
+            let mindmap = {
+                id: 'root1',
+                name: 'Discovery',
+                color: '#3b6bb0',
+                x: 300, y: 150,
+                children: [
+                    { id: 'child1', name: 'Explore', color: '#4a90e2', x: 200, y: 250, children: [] },
+                    { id: 'child2', name: 'Tasks', color: '#e67e22', x: 400, y: 250, children: [
+                        { id: 'sub2a', name: 'Design', color: '#2ecc71', x: 350, y: 350, children: [] },
+                        { id: 'sub2b', name: 'Code', color: '#e74c3c', x: 450, y: 350, children: [] }
+                    ]},
+                    { id: 'child3', name: 'Notes', color: '#9b59b6', x: 300, y: 350, children: [] }
+                ],
+                connections: []
+            };
+
+            // State
+            let collapsedNodes = new Set();
+            let nodeMap = new Map();
+            let dragOffsets = new Map();
+            let currentScale = 1.0;
+            let panX = 0, panY = 0;
+            const MIN_SCALE = 0.2, MAX_SCALE = 3.0;
+            let isPanning = false;
+            let startPanX = 0, startPanY = 0;
+            let connectionMode = false;
+            let breakMode = false;
+            let selectedNodeForConnection = null;
+            let selectedNodeForBreaking = null;
+            let currentNodeToEdit = null;
+            let currentNodeToColor = null;
+            let currentNodeToLink = null;
+            let darkMode = localStorage.getItem('canvas-mobile-dark') === 'true';
+
+            // ==================== UTILITIES ====================
+            const generateId = () => 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+            
+            const findNodeById = (node, id) => {
+                if (node.id === id) return node;
+                if (node.children) {
+                    for (const child of node.children) {
+                        const found = findNodeById(child, id);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const getAllNodes = () => {
+                const nodes = [];
+                const traverse = (node) => {
+                    nodes.push(node);
+                    if (node.children) {
+                        node.children.forEach(child => traverse(child));
+                    }
+                };
+                traverse(mindmap);
+                return nodes;
+            };
+
+            // ==================== BURGER MENU ====================
+            const burgerMenu = document.getElementById('burgerMenu');
+            const burgerOverlay = document.getElementById('burgerOverlay');
+            const burgerBtn = document.getElementById('burgerBtn');
+            const burgerClose = document.getElementById('burgerClose');
+
+            const openBurger = () => {
+                burgerMenu.classList.add('open');
+                burgerOverlay.classList.add('show');
+            };
+
+            const closeBurger = () => {
+                burgerMenu.classList.remove('open');
+                burgerOverlay.classList.remove('show');
+            };
+
+            burgerBtn.addEventListener('click', openBurger);
+            burgerClose.addEventListener('click', closeBurger);
+            burgerOverlay.addEventListener('click', closeBurger);
+
+            // ==================== THEME TOGGLE ====================
+            if (darkMode) {
+                document.body.classList.add('dark-mode');
+                document.getElementById('themeToggle').innerHTML = '<i class="fas fa-sun"></i>';
+            }
+
+            document.getElementById('themeToggle').addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                const btn = document.getElementById('themeToggle');
+                if (document.body.classList.contains('dark-mode')) {
+                    btn.innerHTML = '<i class="fas fa-sun"></i>';
+                    localStorage.setItem('canvas-mobile-dark', 'true');
+                    darkMode = true;
+                } else {
+                    btn.innerHTML = '<i class="fas fa-moon"></i>';
+                    localStorage.setItem('canvas-mobile-dark', 'false');
+                    darkMode = false;
+                }
+                renderMindMap();
+            });
+
+            // ==================== NODE OPERATIONS ====================
+            const addChildToNode = (nodeId) => {
+                const node = findNodeById(mindmap, nodeId);
+                if (!node) return;
+                const name = prompt('Child name:');
+                if (!name) return;
+                node.children.push({
+                    id: generateId(),
+                    name: name,
+                    color: '#7f8c8d',
+                    x: node.x + 80,
+                    y: node.y + 60,
+                    children: []
+                });
+                renderMindMap();
+            };
+
+            const editNodeById = (nodeId) => {
+                const node = findNodeById(mindmap, nodeId);
+                if (!node) return;
+                currentNodeToEdit = nodeId;
+                document.getElementById('editNodeId').innerText = nodeId;
+                document.getElementById('editNodeName').value = node.name;
+                document.getElementById('editModal').classList.add('show');
+            };
+
+            const changeNodeColor = (nodeId) => {
+                const node = findNodeById(mindmap, nodeId);
+                if (!node) return;
+                currentNodeToColor = nodeId;
+                document.getElementById('colorNodeId').innerText = nodeId;
+                document.getElementById('nodeColorPicker').value = node.color || '#2d6bcb';
+                document.getElementById('colorModal').classList.add('show');
+            };
+
+            const showLinkModal = (nodeId) => {
+                const node = findNodeById(mindmap, nodeId);
+                if (!node) return;
+                currentNodeToLink = nodeId;
+                document.getElementById('linkNodeId').innerText = nodeId;
+                document.getElementById('linkUrl').value = node.link?.url || 'https://';
+                document.getElementById('linkText').value = node.link?.text || '';
+                document.getElementById('linkModal').classList.add('show');
+            };
+
+            const toggleCollapseNode = (nodeId) => {
+                const node = findNodeById(mindmap, nodeId);
+                if (!node?.children?.length) return;
+                if (collapsedNodes.has(nodeId)) {
+                    collapsedNodes.delete(nodeId);
+                } else {
+                    collapsedNodes.add(nodeId);
+                }
+                renderMindMap();
+            };
+
+            const deleteNode = (nodeId) => {
+                if (nodeId === mindmap.id) {
+                    if (confirm('Delete entire map?')) {
+                        mindmap = { id: generateId(), name: 'New Map', color: '#3b6bb0', x: 300, y: 150, children: [], connections: [] };
+                        collapsedNodes.clear();
+                    }
+                    renderMindMap();
+                    return;
+                }
+
+                const deleteFromParent = (parent, id) => {
+                    if (parent.children) {
+                        const index = parent.children.findIndex(c => c.id === id);
+                        if (index !== -1) {
+                            parent.children.splice(index, 1);
+                            return true;
+                        }
+                        for (const child of parent.children) {
+                            if (deleteFromParent(child, id)) return true;
+                        }
+                    }
+                    return false;
+                };
+
+                if (confirm('Delete this node?')) {
+                    if (mindmap.connections) {
+                        mindmap.connections = mindmap.connections.filter(c => c.from !== nodeId && c.to !== nodeId);
+                    }
+                    deleteFromParent(mindmap, nodeId);
+                    renderMindMap();
+                }
+            };
+
+            // ==================== CONNECTION MODES ====================
+            const toggleConnectionMode = () => {
+                connectionMode = !connectionMode;
+                breakMode = false;
+                closeBurger();
+            };
+
+            const toggleBreakMode = () => {
+                breakMode = !breakMode;
+                connectionMode = false;
+                closeBurger();
+            };
+
+            const createConnection = (fromId, toId) => {
+                if (fromId === toId) return;
+                if (!mindmap.connections) mindmap.connections = [];
+                const exists = mindmap.connections.some(c => 
+                    (c.from === fromId && c.to === toId) || (c.from === toId && c.to === fromId)
+                );
+                if (!exists) {
+                    mindmap.connections.push({ from: fromId, to: toId, color: '#e67e22' });
+                }
+            };
+
+            // ==================== RENDERING ====================
+            const renderBranches = () => {
+                const container = document.getElementById('branchContainer');
+                if (!container) return;
+                container.innerHTML = '';
+
+                const parentMap = new Map();
+                const traverse = (parent, node) => {
+                    if (parent) parentMap.set(node.id, parent);
+                    node.children?.forEach(c => traverse(node, c));
+                };
+                traverse(null, mindmap);
+
+                for (const node of getAllNodes()) {
+                    let hide = false;
+                    let check = node;
+                    while (check && check.id !== mindmap.id) {
+                        const p = parentMap.get(check.id);
+                        if (p && collapsedNodes.has(p.id)) { hide = true; break; }
+                        check = p;
+                    }
+                    if (hide) continue;
+                    
+                    const parent = parentMap.get(node.id);
+                    if (!parent) continue;
+                    
+                    const parentEl = nodeMap.get(parent.id);
+                    const childEl = nodeMap.get(node.id);
+                    if (!parentEl || !childEl) continue;
+
+                    const pl = parseFloat(parentEl.style.left) || parent.x;
+                    const pt = parseFloat(parentEl.style.top) || parent.y;
+                    const cl = parseFloat(childEl.style.left) || node.x;
+                    const ct = parseFloat(childEl.style.top) || node.y;
+
+                    const sx = pl + parentEl.offsetWidth/2;
+                    const sy = pt + parentEl.offsetHeight;
+                    const ex = cl + childEl.offsetWidth/2;
+                    const ey = ct;
+
+                    const dx = ex - sx, dy = ey - sy;
+                    const len = Math.sqrt(dx*dx + dy*dy);
+                    if (len < 5) continue;
+
+                    const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+                    const branch = document.createElement('div');
+                    branch.className = 'branch tree-branch';
+                    branch.style.left = sx + 'px';
+                    branch.style.top = sy + 'px';
+                    branch.style.width = len + 'px';
+                    branch.style.transform = 'rotate(' + ang + 'deg)';
+                    branch.style.background = 'linear-gradient(90deg, ' + (node.color || '#94a9c9') + ', ' + (node.color || '#94a9c9') + ')';
+                    container.appendChild(branch);
+                }
+
+                if (mindmap.connections) {
+                    mindmap.connections.forEach(conn => {
+                        const from = nodeMap.get(conn.from);
+                        const to = nodeMap.get(conn.to);
+                        if (!from || !to) return;
+
+                        const fx = parseFloat(from.style.left) + from.offsetWidth/2;
+                        const fy = parseFloat(from.style.top) + from.offsetHeight/2;
+                        const tx = parseFloat(to.style.left) + to.offsetWidth/2;
+                        const ty = parseFloat(to.style.top) + to.offsetHeight/2;
+
+                        const dx = tx - fx, dy = ty - fy;
+                        const len = Math.sqrt(dx*dx + dy*dy);
+                        if (len < 5) return;
+
+                        const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+                        const branch = document.createElement('div');
+                        branch.className = 'branch custom-connection';
+                        branch.style.left = fx + 'px';
+                        branch.style.top = fy + 'px';
+                        branch.style.width = len + 'px';
+                        branch.style.transform = 'rotate(' + ang + 'deg)';
+                        container.appendChild(branch);
+                    });
+                }
+            };
+
+            const applyTransform = () => {
+                const canvas = document.getElementById('mindmapCanvas');
+                canvas.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + currentScale + ')';
+                document.getElementById('zoomLevel').innerText = Math.round(currentScale * 100) + '%';
+                renderBranches();
+            };
+
+            const setupDraggable = (card, node) => {
+                interact(card).draggable({
+                    inertia: false,
+                    modifiers: [],
+                    autoScroll: false,
+                    listeners: {
+                        start(e) {
+                            isPanning = false;
+                            const rect = e.target.getBoundingClientRect();
+                            dragOffsets.set(e.target.id, {
+                                x: e.clientX - rect.left,
+                                y: e.clientY - rect.top
+                            });
+                        },
+                        move(e) {
+                            const offset = dragOffsets.get(e.target.id);
+                            if (!offset) return;
+                            const viewport = document.getElementById('viewport');
+                            const vr = viewport.getBoundingClientRect();
+                            const x = (e.clientX - offset.x - vr.left - panX) / currentScale;
+                            const y = (e.clientY - offset.y - vr.top - panY) / currentScale;
+                            e.target.style.left = x + 'px';
+                            e.target.style.top = y + 'px';
+                            const n = findNodeById(mindmap, e.target.getAttribute('data-id'));
+                            if (n) { n.x = x; n.y = y; }
+                            renderBranches();
+                        },
+                        end(e) { dragOffsets.delete(e.target.id); }
+                    }
+                });
+            };
+
+            const renderMindMap = () => {
+                const canvas = document.getElementById('mindmapCanvas');
+                const branchContainer = document.getElementById('branchContainer');
+                Array.from(canvas.children).forEach(el => { if (el !== branchContainer) el.remove(); });
+                nodeMap.clear();
+
+                const addNode = (node) => {
+                    const card = document.createElement('div');
+                    card.className = 'node-card' + (node.link ? ' has-link' : '') + (collapsedNodes.has(node.id) ? ' collapsed' : '');
+                    card.id = 'node-' + node.id;
+                    card.setAttribute('data-id', node.id);
+                    card.style.left = node.x + 'px';
+                    card.style.top = node.y + 'px';
+                    card.style.borderLeftColor = node.color || '#2d6bcb';
+                    card.style.backgroundColor = node.color ? (darkMode ? node.color + '40' : node.color + '20') : (darkMode ? '#2a2f3c' : 'rgba(255,255,255,0.95)');
+                    
+                    let linkIcon = node.link ? '<div class="link-icon" title="' + (node.link.text || node.link.url) + '"><i class="fas fa-globe"></i></div>' : '';
+                    card.innerHTML = '<div>' + node.name + '</div><div class="drag-handle"><i class="fas fa-grip-lines"></i></div>' + linkIcon;
+
+                    card.addEventListener('dblclick', () => editNodeById(node.id));
+                    
+                    const linkEl = card.querySelector('.link-icon');
+                    if (linkEl) {
+                        linkEl.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (node.link?.url) window.open(node.link.url, '_blank');
+                        });
+                    }
+
+                    card.addEventListener('click', (e) => {
+                        if (connectionMode) {
+                            e.stopPropagation();
+                            if (!selectedNodeForConnection) {
+                                selectedNodeForConnection = node.id;
+                                document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected-for-connection'));
+                                card.classList.add('selected-for-connection');
+                            } else {
+                                if (selectedNodeForConnection !== node.id) {
+                                    createConnection(selectedNodeForConnection, node.id);
+                                }
+                                document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected-for-connection'));
+                                selectedNodeForConnection = null;
+                                renderBranches();
+                            }
+                        } else if (breakMode) {
+                            e.stopPropagation();
+                            if (!selectedNodeForBreaking) {
+                                selectedNodeForBreaking = node.id;
+                                document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected-for-breaking'));
+                                card.classList.add('selected-for-breaking');
+                            } else {
+                                if (mindmap.connections) {
+                                    const idx = mindmap.connections.findIndex(c => 
+                                        (c.from === selectedNodeForBreaking && c.to === node.id) ||
+                                        (c.from === node.id && c.to === selectedNodeForBreaking)
+                                    );
+                                    if (idx !== -1) mindmap.connections.splice(idx, 1);
+                                }
+                                document.querySelectorAll('.node-card').forEach(c => c.classList.remove('selected-for-breaking'));
+                                selectedNodeForBreaking = null;
+                                renderBranches();
+                            }
+                        }
+                    });
+
+                    canvas.appendChild(card);
+                    nodeMap.set(node.id, card);
+                    setupDraggable(card, node);
+
+                    if (!collapsedNodes.has(node.id) && node.children) {
+                        node.children.forEach(c => addNode(c));
+                    }
+                };
+
+                addNode(mindmap);
+                applyTransform();
+                renderBranches();
+            };
+
+            // ==================== ZOOM & PAN ====================
+            const setupPanning = () => {
+                const vp = document.getElementById('viewport');
+                vp.addEventListener('mousedown', (e) => {
+                    if (e.target === vp || e.target.id === 'mindmapCanvas' || e.target.classList.contains('branch-container')) {
+                        isPanning = true;
+                        startPanX = e.clientX - panX;
+                        startPanY = e.clientY - panY;
+                        vp.classList.add('panning');
+                    }
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (!isPanning) return;
+                    panX = e.clientX - startPanX;
+                    panY = e.clientY - startPanY;
+                    applyTransform();
+                });
+
+                window.addEventListener('mouseup', () => {
+                    isPanning = false;
+                    vp.classList.remove('panning');
+                });
+            };
+
+            const zoomIn = () => {
+                if (currentScale < MAX_SCALE) {
+                    const vp = document.getElementById('viewport');
+                    const r = vp.getBoundingClientRect();
+                    const ns = Math.min(MAX_SCALE, currentScale + 0.2);
+                    panX -= (r.width/2 / currentScale) * (0.2 / ns);
+                    panY -= (r.height/2 / currentScale) * (0.2 / ns);
+                    currentScale = ns;
+                    applyTransform();
+                }
+            };
+
+            const zoomOut = () => {
+                if (currentScale > MIN_SCALE) {
+                    const vp = document.getElementById('viewport');
+                    const r = vp.getBoundingClientRect();
+                    const ns = Math.max(MIN_SCALE, currentScale - 0.2);
+                    panX += (r.width/2 / ns) * (0.2 / currentScale);
+                    panY += (r.height/2 / ns) * (0.2 / currentScale);
+                    currentScale = ns;
+                    applyTransform();
+                }
+            };
+
+            const zoomReset = () => {
+                currentScale = 1.0;
+                panX = 0;
+                panY = 0;
+                applyTransform();
+            };
+
+            // ==================== BURGER MENU ACTIONS ====================
+            document.getElementById('newMapBtn').addEventListener('click', () => {
+                mindmap = { id: generateId(), name: 'New Map', color: '#3b6bb0', x: 300, y: 150, children: [], connections: [] };
+                collapsedNodes.clear();
+                renderMindMap();
+                closeBurger();
+            });
+
+            document.getElementById('loadMapBtn').addEventListener('click', () => {
+                document.getElementById('loadModal').classList.add('show');
+                closeBurger();
+            });
+
+            document.getElementById('exportBtn').addEventListener('click', () => {
+                const data = JSON.stringify(mindmap, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'mindmap.json';
+                a.click();
+                closeBurger();
+            });
+
+            document.getElementById('shareBtn').addEventListener('click', () => {
+                document.getElementById('shareData').value = JSON.stringify(mindmap, null, 2);
+                document.getElementById('shareModal').classList.add('show');
+                closeBurger();
+            });
+
+            document.getElementById('connectBtn').addEventListener('click', toggleConnectionMode);
+            document.getElementById('breakBtn').addEventListener('click', toggleBreakMode);
+
+            document.getElementById('linkBtn').addEventListener('click', () => {
+                const id = prompt('Node ID:') || mindmap.id;
+                const node = findNodeById(mindmap, id);
+                if (node) showLinkModal(id);
+                closeBurger();
+            });
+
+            document.getElementById('addRootBtn').addEventListener('click', () => {
+                const name = prompt('Root name:');
+                if (!name) return;
+                const old = JSON.parse(JSON.stringify(mindmap));
+                mindmap = { id: generateId(), name: name, color: '#3b6bb0', x: 300, y: 150, children: [old], connections: mindmap.connections || [] };
+                collapsedNodes.clear();
+                renderMindMap();
+                closeBurger();
+            });
+
+            document.getElementById('addChildBtn').addEventListener('click', () => {
+                const id = prompt('Parent ID:') || mindmap.id;
+                addChildToNode(id);
+                closeBurger();
+            });
+
+            document.getElementById('editBtn').addEventListener('click', () => {
+                const id = prompt('Node ID:') || mindmap.id;
+                editNodeById(id);
+                closeBurger();
+            });
+
+            document.getElementById('colorBtn').addEventListener('click', () => {
+                const id = prompt('Node ID:') || mindmap.id;
+                changeNodeColor(id);
+                closeBurger();
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                const layout = (node, x, y, xo = 120, yo = 80) => {
+                    node.x = x;
+                    node.y = y;
+                    if (node.children) {
+                        node.children.forEach((c, i) => layout(c, x + xo + i*20, y + yo, xo*0.8, yo));
+                    }
+                };
+                layout(mindmap, 300, 150);
+                renderMindMap();
+                closeBurger();
+            });
+
+            document.getElementById('collapseAllBtn').addEventListener('click', () => {
+                getAllNodes().forEach(n => { if (n.children?.length) collapsedNodes.add(n.id); });
+                renderMindMap();
+                closeBurger();
+            });
+
+            document.getElementById('expandAllBtn').addEventListener('click', () => {
+                collapsedNodes.clear();
+                renderMindMap();
+                closeBurger();
+            });
+
+            // ==================== FILE INPUT ====================
+            document.getElementById('fileInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if (data.id && data.name && data.children) {
+                                mindmap = data;
+                                if (!mindmap.connections) mindmap.connections = [];
+                                collapsedNodes.clear();
+                                renderMindMap();
+                            }
+                        } catch (err) {
+                            alert('Invalid file');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            });
+
+            // ==================== MODAL HANDLERS ====================
+            document.getElementById('cancelEdit').addEventListener('click', () => {
+                document.getElementById('editModal').classList.remove('show');
+            });
+
+            document.getElementById('saveEdit').addEventListener('click', () => {
+                const name = document.getElementById('editNodeName').value.trim();
+                if (name && currentNodeToEdit) {
+                    const node = findNodeById(mindmap, currentNodeToEdit);
+                    if (node) node.name = name;
+                }
+                document.getElementById('editModal').classList.remove('show');
+                renderMindMap();
+            });
+
+            document.getElementById('cancelColor').addEventListener('click', () => {
+                document.getElementById('colorModal').classList.remove('show');
+            });
+
+            document.getElementById('applyColor').addEventListener('click', () => {
+                const color = document.getElementById('nodeColorPicker').value;
+                if (currentNodeToColor) {
+                    const node = findNodeById(mindmap, currentNodeToColor);
+                    if (node) node.color = color;
+                }
+                document.getElementById('colorModal').classList.remove('show');
+                renderMindMap();
+            });
+
+            document.getElementById('cancelLink').addEventListener('click', () => {
+                document.getElementById('linkModal').classList.remove('show');
+            });
+
+            document.getElementById('saveLink').addEventListener('click', () => {
+                const url = document.getElementById('linkUrl').value.trim();
+                const text = document.getElementById('linkText').value.trim();
+                if (url && currentNodeToLink) {
+                    const node = findNodeById(mindmap, currentNodeToLink);
+                    if (node) node.link = { url: url, text: text || url };
+                }
+                document.getElementById('linkModal').classList.remove('show');
+                renderMindMap();
+            });
+
+            document.getElementById('closeShareBtn').addEventListener('click', () => {
+                document.getElementById('shareModal').classList.remove('show');
+            });
+
+            document.getElementById('copyShareBtn').addEventListener('click', () => {
+                navigator.clipboard.writeText(document.getElementById('shareData').value);
+                alert('Copied!');
+            });
+
+            document.getElementById('cancelLoad').addEventListener('click', () => {
+                document.getElementById('loadModal').classList.remove('show');
+            });
+
+            document.getElementById('confirmLoad').addEventListener('click', () => {
+                try {
+                    const data = JSON.parse(document.getElementById('loadData').value);
+                    if (data.id && data.name && data.children) {
+                        mindmap = data;
+                        if (!mindmap.connections) mindmap.connections = [];
+                        collapsedNodes.clear();
+                        renderMindMap();
+                    }
+                } catch (e) {
+                    alert('Invalid JSON');
+                }
+                document.getElementById('loadModal').classList.remove('show');
+            });
+
+            // Close modals on overlay click
+            ['editModal', 'colorModal', 'linkModal', 'shareModal', 'loadModal'].forEach(id => {
+                document.getElementById(id).addEventListener('click', (e) => {
+                    if (e.target.classList.contains('modal-overlay')) {
+                        document.getElementById(id).classList.remove('show');
+                    }
+                });
+            });
+
+            // ==================== ZOOM BUTTONS ====================
+            document.getElementById('zoomIn').addEventListener('click', zoomIn);
+            document.getElementById('zoomOut').addEventListener('click', zoomOut);
+            document.getElementById('zoomReset').addEventListener('click', zoomReset);
+
+            // ==================== INITIALIZE ====================
+            setupPanning();
+            renderMindMap();
+        })();
+    </script>
+</body>
+</html>
